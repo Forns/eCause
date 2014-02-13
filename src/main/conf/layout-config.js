@@ -11,7 +11,7 @@ module.exports = function (layoutConfig) {
     var rendering = {};
     
     rendering.layout = (options && options.layout) ? options.layout : true;
-    rendering.title = (options && options.title) ? options.title : "Found My Designer";
+    rendering.title = (options && options.title) ? options.title : "eCause";
     rendering.css = (options && options.css) ? options.css : "";
     rendering.scripts = (options && options.scripts) ? JSON.stringify(options.scripts) : "";
     rendering.page = (options && options.page) ? options.page : null;

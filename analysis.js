@@ -37,7 +37,7 @@ var express = require('express'),
       analysisPort: analysisPort,
       
       // This server instance's job
-      ROLE: "interface"
+      ROLE: "analysis"
     },
     
     // Layout config

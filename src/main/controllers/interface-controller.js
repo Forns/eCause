@@ -23,14 +23,7 @@ module.exports = function (tools) {
    */
   
   app.get("/", function (req, res) {
-    if (security.accessCheck(req, "all", res, "render")) {
-      res.render("interface/index", layoutConfig.layoutOptions(req, {
-        title: "Found My Designer",
-        scripts: [
-          "/js/display/general/index-display.js"
-        ]
-      }));
-    }
+    
   });
   
 
