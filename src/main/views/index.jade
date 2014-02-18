@@ -1,0 +1,23 @@
+extends layout
+
+block content
+  #main-content
+    div.container
+      div.row
+        div.col-xl-12
+          h1 eCause
+          small A web-mining, natural language processing, causal extraction engine... also a bad pun on "because"
+          hr
+          h4 Enter a search term below
+          form#search-form.form-horizontal(role="form")
+            div.form-group
+              label.col-md-2.control-label(for="search-term") Find causal relations for:
+              div.col-md-10
+                input#search-term.form-control(type="text", placeholder="World War II", maxlength="100")
+                
+            div.form-group.text
+              button#login-button.btn.btn-default.submit-button(type="submit").pull-right 
+                span.glyphicon.glyphicon-check
+                | &nbsp Submit
+                
+          #output

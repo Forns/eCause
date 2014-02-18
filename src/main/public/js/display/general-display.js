@@ -1,0 +1,6 @@
+/**
+ * general-display.js
+ */
+$(function () {
+  
+});

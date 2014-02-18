@@ -23,12 +23,20 @@ module.exports = function (tools) {
    */
   
   app.get("/", function (req, res) {
-    
+    res.render("index", layoutConfig.layoutOptions(req, {
+      title: "eCause",
+      scripts: [
+        "/js/display/index-display.js"
+      ]
+    }));
   });
   
 
   /*
    * POST ROUTES
    */
+  app.post("/search", function (req, res) {
+    
+  });
   
 };

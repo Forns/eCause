@@ -21,6 +21,7 @@ module.exports = function (tools) {
   
   if (ROLE === "analysis") {
     
+    /*
     app.get("/test", function (req, res) {
       res.send("Hi!");
     });
@@ -30,6 +31,7 @@ module.exports = function (tools) {
       console.log(req.body.test);
       res.send(200, {test: "yo!"});
     });
+    */
     
   }
   
@@ -39,6 +41,8 @@ module.exports = function (tools) {
    */
   
   if (ROLE === "interface") {
+    
+    /*
     request.post(
       {
         url: "http://localhost:" + status.analysisPort + "/test",
@@ -53,6 +57,8 @@ module.exports = function (tools) {
         console.log(body);
       }
     );
+    */
+   
   }
   
 };
