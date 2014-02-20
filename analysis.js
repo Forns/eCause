@@ -27,6 +27,8 @@ var express = require('express'),
     security = {},
     dao,
     controllers,
+    lda,
+    topicModeler,
     tools,
     
     // Status holds all the constants to be used throughout the application
@@ -96,6 +98,8 @@ expressValidator.Validator.prototype.sanitary = function () {
 layoutConfig = require('./src/main/conf/layout-config.js')(layoutConfig).layoutConfig;
 dao          = require('./src/main/conf/db-config.js')().dao;
 security     = require('./src/main/conf/security-config.js')(layoutConfig, status).security;
+lda          = require('./src/main/conf/lda-config.js')().lda;
+topicModeler = require('./src/main/conf/topic-modeler-config.js')(lda).$TM;
 
 
 /*
@@ -115,16 +119,17 @@ tools = {
   fs: fs,
   expressValidator: expressValidator,
   validator: validator,
+  $TM: topicModeler,
   
   // Followed by node modules that haven't yet been loaded!
   mongodb: require("mongodb"),
   GridFSStream: require("gridfs-stream"),
-  request: require("request")
+  request: require("request"),
+  natural: require("natural")
 },
 
 controllers = [
-  './src/main/controllers/interface-controller.js',
-  './src/main/controllers/messenger-controller.js'
+  './src/main/controllers/analysis-controller.js'
 ];
 
 for (var c in controllers) {

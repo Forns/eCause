@@ -125,8 +125,7 @@ tools = {
 },
 
 controllers = [
-  './src/main/controllers/interface-controller.js',
-  './src/main/controllers/messenger-controller.js'
+  './src/main/controllers/interface-controller.js'
 ];
 
 for (var c in controllers) {

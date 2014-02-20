@@ -17,6 +17,7 @@ module.exports = function (tools) {
       Grid = mongo.Grid,
       GridStore = mongo.GridStore,
       ObjectID = mongo.ObjectID,
+      status = tools.status,
       request = tools.request,
       google = tools.google,
       Readability = require("readabilitySAX/readabilitySAX.js"),
@@ -63,9 +64,24 @@ module.exports = function (tools) {
                 
             parser.write(body);
             parsed++;
-            console.log(readable.getText());
+            corpus.push(readable.getText());
             parser.end();
             if (parsed == google.resultsPerPage) {
+              console.log("[!] Passed to analysis!");
+              request.post(
+                {
+                  url: "http://localhost:" + status.analysisPort + "/analyze",
+                  form: {
+                    corpus: corpus
+                  }
+                },
+                function (err2, response2, body2) {
+                  if (err2) {
+                    console.error(err2);
+                    res.send(500, {error: err2});
+                  }
+                }
+              );
               res.send(200);
             }
           }
@@ -74,7 +90,11 @@ module.exports = function (tools) {
     
       if (nextCounter < 4) {
         nextCounter += 1;
-        if (next) next();
+        if (next) {
+          next()
+        } else {
+          console.log("NEXT");
+        };
       }
     });
   });

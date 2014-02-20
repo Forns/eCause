@@ -12,7 +12,15 @@ $(function () {
           "body",
           "popup",
           "Working...",
-          "<p>Please wait while we process your request...</p>",
+          "<table class='table'>" +
+            "<caption></caption>" +
+            "<tbody>" +
+              "<tr>" +
+                "<th>Fetching documents...</th>" +
+                "<td id='progress-documents'>In Progress...</td>" +
+              "</tr>" +
+            "</tbody>" +
+          "</table>",
           ""
         );
         
@@ -21,8 +29,10 @@ $(function () {
           type: "POST",
           data: {search: searchTerm.val()},
           success: function (results, textStatus, jqXHR) {
-            console.log("OK!");
-            $("#popup").modal("hide");
+            $("#progress-documents")
+              .html(
+                "<span class='glyphicon glyphicon-check'></span> Done!"
+              );
           },
           error: function (jqXHR, textStatus, errorThrown) {
             $("#popup").modal("hide");
