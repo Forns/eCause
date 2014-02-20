@@ -3,14 +3,26 @@
  */
 $(function () {
   var formId = "#search-form",
+      searchTerm = $("#search-term"),
       
       validObject = validationConfig(formId, function () {
+        // First, set up the loading screen
+        $("#popup").modal("hide");
+        modalPopup(
+          "body",
+          "popup",
+          "Working...",
+          "<p>Please wait while we process your request...</p>",
+          ""
+        );
+        
         $.ajax({
           url: "/search",
           type: "POST",
-          data: {search: $("#search-term").val()},
+          data: {search: searchTerm.val()},
           success: function (results, textStatus, jqXHR) {
             console.log("OK!");
+            $("#popup").modal("hide");
           },
           error: function (jqXHR, textStatus, errorThrown) {
             $("#popup").modal("hide");
@@ -23,4 +35,6 @@ $(function () {
           }
         });
       });
+      
+      searchTerm.focus();
 });

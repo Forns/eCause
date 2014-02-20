@@ -44,7 +44,7 @@ var modalPopup = function (container, id, title, body, buttons, options, display
         container,
         id,
         title,
-        "<p><strong>Error:</strong> Sorry, looks like an error occurred on our side! If you continue to see this message, please contact the FMD administrators using the webform at the bottom of the page.</p>" +
+        "<p><strong>Error:</strong> Sorry, looks like an error occurred on our side! If you continue to see this message, please contact the eCause administrator.</p>" +
         "<p>Error Status: " + error + "</p>",
         "<button type='button' class='close' data-dismiss='modal' aria-hidden='true'>OK</button>"
       );

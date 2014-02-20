@@ -119,7 +119,9 @@ tools = {
   // Followed by node modules that haven't yet been loaded!
   mongodb: require("mongodb"),
   GridFSStream: require("gridfs-stream"),
-  request: require("request")
+  request: require("request"),
+  readability: require("readabilitySAX"),
+  google: require("google")
 },
 
 controllers = [
