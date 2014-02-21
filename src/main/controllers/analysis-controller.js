@@ -29,13 +29,22 @@ module.exports = function (tools) {
   
   app.post("/analyze", function (req, res) {
     var inputs = req.body,
+        reqIp = inputs.reqIp,
         corpus = inputs.corpus;
         
     ipLog[req.ip] = 0;
     
     for (var c in corpus) {
-      console.log($TM.getTopics(corpus[c]));
+      console.log($TM.getTopics(corpus[c].split(".")));
     }
+  });
+  
+  app.post("/progress", function (req, res) {
+    var inputs = req.body,
+        reqIp = inputs.ip;
+        console.log(reqIp);
+        console.log(ipLog[reqIp]);
+    res.send(200, {progress: (ipLog[reqIp]) ? ipLog[reqIp] : -1});
   });
   
 };

@@ -41,7 +41,7 @@ module.exports = function (lda) {
       
     var V = vocab.length;
     var M = documents.length;
-    var K = 2; // Assume 2 topics, for now
+    var K = 3; // Assume 3 topics, for now
     var alpha = 0.1;  // per-document distributions over topics
     var beta = .01;  // per-topic distributions over words
   

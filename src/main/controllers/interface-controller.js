@@ -36,6 +36,22 @@ module.exports = function (tools) {
     }));
   });
   
+  app.get("/progress", function (req, res) {
+    request.post(
+      {
+        url: "http://localhost:" + status.analysisPort + "/progress",
+        form: {
+          ip: req.ip
+        }
+      },
+      function (err, response, body) {
+        var b = JSON.parse(body);
+        console.log(b);
+        res.send(200, {progress: b.progress});
+      }
+    );
+  });
+  
 
   /*
    * POST ROUTES
@@ -72,7 +88,8 @@ module.exports = function (tools) {
                 {
                   url: "http://localhost:" + status.analysisPort + "/analyze",
                   form: {
-                    corpus: corpus
+                    corpus: corpus,
+                    reqIp: req.ip
                   }
                 },
                 function (err2, response2, body2) {
