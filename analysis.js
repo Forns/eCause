@@ -9,6 +9,10 @@
  *   express-validator
  *   validator
  *   mongodb
+ *   request
+ *   natural
+ *   google
+ *   readability
  * 
  */
 
@@ -125,7 +129,8 @@ tools = {
   mongodb: require("mongodb"),
   GridFSStream: require("gridfs-stream"),
   request: require("request"),
-  natural: require("natural")
+  natural: require("natural"),
+  WNdb: require("WNdb")
 },
 
 controllers = [

@@ -10,7 +10,7 @@
 module.exports = function (lda) {
   var $TM = {};
   
-  $TM.getTopics = function (sentences) {
+  $TM.getTopics = function (sentences, topicCount, termCount) {
     var documents = new Array(),
         f = {},
         vocab = new Array(),
@@ -41,9 +41,9 @@ module.exports = function (lda) {
       
     var V = vocab.length;
     var M = documents.length;
-    var K = 3; // Assume 3 topics, for now
+    var K = topicCount;
     var alpha = 0.1;  // per-document distributions over topics
-    var beta = .01;  // per-topic distributions over words
+    var beta = 0.01;  // per-topic distributions over words
   
     lda.configure(documents,V,10000, 2000, 100, 10);
     lda.gibbs(K, alpha, beta);
@@ -52,7 +52,7 @@ module.exports = function (lda) {
     var phi = lda.getPhi();
   
     // Topic calculation
-    var topTerms=20;
+    var topTerms= termCount;
     var topicText = [];
     var topicProbs = [];
     for (var k = 0; k < phi.length; k++) {

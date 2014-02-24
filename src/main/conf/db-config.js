@@ -36,15 +36,6 @@ module.exports = function () {
           console.error(error);
         } else {
           console.log("[!] DATABASE: db on host and port " + host + ":" + port + " has successfully connected!");
-          
-          // Performs a simple query every 3 hours to keep the db connection alive
-          // (wait a few seconds at server start to give db time to connect)
-          setTimeout(function () {
-            dao.preserveConnection();
-            setInterval(function () {
-              dao.preserveConnection();
-            }, 10800000);
-          }, 5000);
         }
         
       });

@@ -57,9 +57,8 @@ module.exports = function (tools) {
    * POST ROUTES
    */
   app.post("/search", function (req, res) {
-    google.resultsPerPage = 5;
-    var nextCounter = 0,
-        parsed = 0
+    google.resultsPerPage = 8;
+    var parsed = 0
         corpus = [];
     
     google('World War II', function(err, next, links){
@@ -67,7 +66,7 @@ module.exports = function (tools) {
         console.error(err);
         res.send(500, {error: err});
       };
-    
+      
       for (var i = 0; i < links.length; ++i) {
         console.log(">>>>>>>" + links[i].link);
         request.get(
@@ -78,10 +77,12 @@ module.exports = function (tools) {
             var readable = new Readability({}),
                 parser = new Parser(readable, {});
                 
-            parser.write(body);
+            if (body !== null || body.length !== 0) {
+              parser.write(body);
+              corpus.push(readable.getText());
+              parser.end();
+            }
             parsed++;
-            corpus.push(readable.getText());
-            parser.end();
             if (parsed == google.resultsPerPage) {
               console.log("[!] Passed to analysis!");
               request.post(
@@ -99,19 +100,11 @@ module.exports = function (tools) {
                   }
                 }
               );
+              console.log("PARSED: " + parsed);
               res.send(200);
             }
           }
         );
-      }
-    
-      if (nextCounter < 4) {
-        nextCounter += 1;
-        if (next) {
-          next()
-        } else {
-          console.log("NEXT");
-        };
       }
     });
   });
