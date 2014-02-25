@@ -6,10 +6,10 @@ $(function () {
       searchTerm = $("#search-term"),
       
       progressTick,
-      totalStages = 2,
+      totalStages = 3,
       stagesComplete = 0,
       progressUpdate = function (stage) {
-        for (var i = stagesComplete; i <= stage; i++) {
+        for (var i = 0; i <= stage; i++) {
           var changeText = "-";
           if (i === stage) {
             changeText = "In progress...";
@@ -41,6 +41,10 @@ $(function () {
               "<tr>" +
                 "<th>Topic modeling...</th>" +
                 "<td id='progress-documents' class='prog' stage='1'>-</td>" +
+              "</tr>" +
+              "<tr>" +
+                "<th>Finding patterns...</th>" +
+                "<td id='progress-documents' class='prog' stage='2'>-</td>" +
               "</tr>" +
             "</tbody>" +
           "</table>",

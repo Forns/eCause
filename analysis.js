@@ -13,6 +13,8 @@
  *   natural
  *   google
  *   readability
+ *   WNdb
+ *   pos
  * 
  */
 
@@ -27,12 +29,18 @@ var express = require('express'),
     app = module.exports = express(),
     expressValidator = require("express-validator"),
     validator = require("validator"),
+    natural = require("natural"),
+    WNdb = require("WNdb"),
+    pos = require("pos"),
     sanitize = validator.sanitize,
     security = {},
     dao,
     controllers,
     lda,
     topicModeler,
+    PatternStuff,
+    Pattern,
+    PatternContainer,
     tools,
     
     // Status holds all the constants to be used throughout the application
@@ -104,6 +112,9 @@ dao          = require('./src/main/conf/db-config.js')().dao;
 security     = require('./src/main/conf/security-config.js')(layoutConfig, status).security;
 lda          = require('./src/main/conf/lda-config.js')().lda;
 topicModeler = require('./src/main/conf/topic-modeler-config.js')(lda).$TM;
+PatternStuff = require('./src/main/conf/pattern-config.js')(natural, WNdb, pos, status);
+Pattern      = PatternStuff.Pattern;
+PatternCont  = PatternStuff.PatternContainer;
 
 
 /*
@@ -118,19 +129,22 @@ tools = {
   dao: dao,
   layoutConfig: layoutConfig,
   status: status,
+  Pattern: Pattern,
+  PatternContainer: PatternCont,
+  $TM: topicModeler,
   
   // Followed by node modules that have already been loaded...
   fs: fs,
   expressValidator: expressValidator,
   validator: validator,
-  $TM: topicModeler,
+  natural: natural,
+  WNdb: WNdb,
+  pos: pos,
   
   // Followed by node modules that haven't yet been loaded!
   mongodb: require("mongodb"),
   GridFSStream: require("gridfs-stream"),
-  request: require("request"),
-  natural: require("natural"),
-  WNdb: require("WNdb")
+  request: require("request")
 },
 
 controllers = [
@@ -157,7 +171,6 @@ app.use(function(req, res){
 /*
  * SERVER START
  */
-console.log(process.pid);
 app.listen((status.ROLE === "interface") ? interfacePort : analysisPort);
 console.log('[!] ' + new Date().toDateString() + ': Express server listening on port in %s mode', app.settings.env);
 

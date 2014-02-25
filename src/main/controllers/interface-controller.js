@@ -21,7 +21,9 @@ module.exports = function (tools) {
       request = tools.request,
       google = tools.google,
       Readability = require("readabilitySAX/readabilitySAX.js"),
-      Parser = require("htmlparser2/lib/Parser.js");
+      Parser = require("htmlparser2/lib/Parser.js"),
+      
+      ipLog = {};
   
   /*
    * GET ROUTES
@@ -37,25 +39,24 @@ module.exports = function (tools) {
   });
   
   app.get("/progress", function (req, res) {
-    request.post(
-      {
-        url: "http://localhost:" + status.analysisPort + "/progress",
-        form: {
-          ip: req.ip
-        }
-      },
-      function (err, response, body) {
-        var b = JSON.parse(body);
-        console.log(b);
-        res.send(200, {progress: b.progress});
-      }
-    );
+    res.send(200, {progress: (ipLog[req.ip] >= 0) ? ipLog[req.ip] : -1});
   });
   
 
   /*
    * POST ROUTES
    */
+  
+  app.post("/progress", function (req, res) {
+    var inputs = req.body,
+        reqIp = inputs.reqIp,
+        stage = inputs.stage;
+        
+    ipLog[reqIp] = parseInt(stage);
+    console.log(ipLog);
+    res.send(200);
+  });
+  
   app.post("/search", function (req, res) {
     google.resultsPerPage = 8;
     var parsed = 0
@@ -85,6 +86,7 @@ module.exports = function (tools) {
             parsed++;
             if (parsed == google.resultsPerPage) {
               console.log("[!] Passed to analysis!");
+              ipLog[req.ip] = 1;
               request.post(
                 {
                   url: "http://localhost:" + status.analysisPort + "/analyze",
