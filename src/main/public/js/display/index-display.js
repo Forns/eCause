@@ -68,7 +68,7 @@ $(function () {
                 success: function (results, textStatus, jqXHR) {
                   console.log(results);
                   progressUpdate(results.progress);
-                  if (results.progress > totalStages) {
+                  if (results.progress >= totalStages) {
                     clearInterval(progressTick);
                     $("#popup .modal-footer")
                       .append(

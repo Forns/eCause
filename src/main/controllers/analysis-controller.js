@@ -51,16 +51,16 @@ module.exports = function (tools) {
       },
       
       getCleanCorpus = function (corpus) {
-        var unitedCorpus = [];
+        var purgedCorpus = [];
         
         for (var c in corpus) {
           corpus[c] = purgeDocument(corpus[c]);
           if (corpus[c] && corpus[c] !== "undefined") {
-            unitedCorpus.push(corpus[c]);
+            purgedCorpus.push(corpus[c]);
           }
         }
         
-        return unitedCorpus;
+        return purgedCorpus;
       },
       
       getTopicModels = function (corpus) {
@@ -113,7 +113,17 @@ module.exports = function (tools) {
             });
           })(t);
         }
-        
+      },
+      
+      getTaggedSentences = function (purgedCorpus) {
+        var taggedSentences = [];
+        for (var c in purgedCorpus) {
+          var sentences = purgedCorpus[c].split(".");
+          for (var s in sentences) {
+            taggedSentences.push(new Pattern(sentences[s]));
+          }
+        }
+        return taggedSentences;
       };
   
   /*
@@ -129,23 +139,22 @@ module.exports = function (tools) {
     var inputs = req.body,
         reqIp = inputs.reqIp,
         corpus = inputs.corpus,
-        unitedCorpus = [],
-        sentences = [],
+        purgedCorpus = [],
+        taggedSentences = [],
         topicModels = [],
         combinedTopics = {},
         topicPOS = [],
         concepts = {},
         movements = {};
         
-    
-        
-    // Successful loading into analyzer gives status
-    // code 1
-    unitedCorpus = getCleanCorpus(corpus);
+    // The purged corpus contains all documents from the
+    // original that had content, now purged of irrelevant
+    // or malformed terms 
+    purgedCorpus = getCleanCorpus(corpus);
     
     // Once we've got our topic models, give status
     // code 2
-    topicModels = getTopicModels(unitedCorpus);
+    topicModels = getTopicModels(purgedCorpus);
     combinedTopics = getCombinedTopics(topicModels);
     updateProgress(reqIp, 2);
     
@@ -153,10 +162,7 @@ module.exports = function (tools) {
     POSFilter(combinedTopics, function (results) {
       concepts = results[0];
       movements = results[1];
-      
-      for (var c in unitedCorpus) {
-        console.log(new Pattern(unitedCorpus[c]));
-      }
+      taggedSentences = getTaggedSentences(purgedCorpus);
       
       updateProgress(reqIp, 3);
       res.send(200);
