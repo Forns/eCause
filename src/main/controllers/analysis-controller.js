@@ -111,9 +111,7 @@ module.exports = function (tools) {
               console.log(Object.keys(combinedTopics).length);
               if (total >= Object.keys(combinedTopics).length) {
                 // Integrate findings into the Pattern class
-                Pattern.addConcepts(Object.keys(concepts));
-                Pattern.addCausalVerbs(Object.keys(movements));
-                callback();
+                callback(Object.keys(concepts), Object.keys(movements));
               }
             });
           })(t);
@@ -127,13 +125,6 @@ module.exports = function (tools) {
           for (var s in sentences) {
             taggedSentences.push(new Pattern(sentences[s]));
           }
-        }
-        return taggedSentences;
-      },
-      
-      getSentenceTemplates = function (taggedSentences) {
-        for (var s in taggedSentences) {
-          taggedSentences[s] = taggedSentences[s].toTemplate();
         }
         return taggedSentences;
       };
@@ -156,7 +147,8 @@ module.exports = function (tools) {
         sentenceTemplates = [],
         topicModels = [],
         topicPOS = [],
-        combinedTopics = {};
+        combinedTopics = {},
+        patternKB = new PatternCollection();
         
     // The purged corpus contains all documents from the
     // original that had content, now purged of irrelevant
@@ -170,18 +162,15 @@ module.exports = function (tools) {
     updateProgress(reqIp, 2);
     
     // Now we'll start looking at the semantic analysis
-    POSFilter(combinedTopics, function () {
+    POSFilter(combinedTopics, function (concepts, movements) {
       taggedSentences = getTaggedSentences(purgedCorpus);
-      sentenceTemplates = getSentenceTemplates(taggedSentences);
+      patternKB.addConcepts(concepts);
+      patternKB.addCausalVerbs(movements);
+      patternKB.addPatterns(taggedSentences);
       
-      for (var s in sentenceTemplates) {
-        console.log(sentenceTemplates[s].toTemplateString());
+      for (var s in patternKB.sentenceTemplates) {
+        console.log(patternKB.sentenceTemplates[s].toTemplateString());
       }
-      
-      console.log("=========== TEST ===========");
-      var test = new Pattern("World War II was the result of decades of political and economic strife in Germany.");
-      console.log(test.toString());
-      console.log(test.toTemplate().toTemplateString());
       
       updateProgress(reqIp, 3);
       res.send(200);

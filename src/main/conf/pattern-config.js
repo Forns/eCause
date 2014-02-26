@@ -13,21 +13,9 @@ module.exports = function (natural, WNdb, pos, status) {
       lexer = new pos.Lexer(),
       tagger = new pos.Tagger(),
       
-      verbTrie = new Trie(false),
-      conceptTrie = new Trie(false),
-      patternTrie = new Trie(false),
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
       causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
 
-  // Set up the verb Trie
-  for (var v in causalVerbs) {
-    causalVerbs[v] = stemmer.stem(causalVerbs[v]);
-  }
-  verbTrie.addStrings(causalVerbs);
-  
-  // Set up the pattern part of speech Trie
-  patternTrie.addStrings(patternPOS);
-  
   Pattern = this.Pattern = function (sentence) {
     this.elements = [];
     this.templated = false;
@@ -45,14 +33,6 @@ module.exports = function (natural, WNdb, pos, status) {
             tag: tags[t][1]
           };
         
-      if (conceptTrie.contains(toPush.stem)) {
-        toPush.isConcept = true;
-        this.isRelevant = true;
-      }
-      if (verbTrie.contains(toPush.stem)) {
-        toPush.isMovement = true;
-        this.isRelevant = true;
-      }
       // Log the pos for each element
       this.elements.push(toPush);
     }
@@ -66,7 +46,7 @@ module.exports = function (natural, WNdb, pos, status) {
    */
   Pattern.prototype = {
     
-    toTemplate: function () {
+    toTemplate: function (patternTrie) {
       var result = new Pattern();
       result.templated = true;
       result.sentence = this.elements;
@@ -129,6 +109,9 @@ module.exports = function (natural, WNdb, pos, status) {
     },
     
     toTemplateString: function () {
+      if (!this.templated) {
+        return this.toString();
+      }
       var result = "";
       for (var e in this.elements) {
         var currentElement = this.elements[e];
@@ -141,31 +124,65 @@ module.exports = function (natural, WNdb, pos, status) {
     
   };
   
-  Pattern.addCausalVerbs = function (verbs) {
-    for (var v in verbs) {
-      verbs[v] = stemmer.stem(verbs[v]);
+  /*
+   * PATTERN COLLECTION CONSTRUCTOR
+   */
+  
+  PatternCollection = this.PatternCollection = function () {
+    this.verbTrie = new Trie(false);
+    this.conceptTrie = new Trie(false);
+    this.patternTrie = new Trie(false);
+    this.sentences = [];
+    this.sentenceTemplates = [];
+    
+    // Set up the verb Trie
+    for (var v in causalVerbs) {
+      causalVerbs[v] = stemmer.stem(causalVerbs[v]);
     }
-    verbTrie.addStrings(verbs);
+    this.verbTrie.addStrings(causalVerbs);
+    
+    // Set up the pattern part of speech Trie
+    this.patternTrie.addStrings(patternPOS);
   };
   
-  Pattern.addConcepts = function (concepts) {
-    for (var c in concepts) {
-      concepts[c] = stemmer.stem(concepts[c]);
-    }
-    conceptTrie.addStrings(concepts);
-  }
-  
-  Pattern.isCausalVerb = function (verb, tag) {
-    return {isCausal: verbTrie.contains(stemmer.stem(verb)), active: true};
-  };
-  
-
   /*
    * PATTERN COLLECTION PROTOTYPE
    */
   
-  PatternCollection = this.PatternCollection = function () {};
   PatternCollection.prototype = {
+    
+    addCausalVerbs: function (verbs) {
+      for (var v in verbs) {
+        verbs[v] = stemmer.stem(verbs[v]);
+      }
+      this.verbTrie.addStrings(verbs);
+    },
+    
+    addConcepts: function (concepts) {
+      for (var c in concepts) {
+        concepts[c] = stemmer.stem(concepts[c]);
+      }
+      this.conceptTrie.addStrings(concepts);
+    },
+    
+    addPatterns: function (patterns) {
+      for (var p in patterns) {
+        var pattern = patterns[p];
+        for (var e in pattern.elements) {
+          if (this.conceptTrie.contains(pattern.elements[e].stem)) {
+            pattern.elements[e].isConcept = true;
+            pattern.isRelevant = true;
+          }
+          if (this.verbTrie.contains(pattern.elements[e].stem)) {
+            pattern.elements[e].isMovement = true;
+            pattern.isRelevant = true;
+          }
+        }
+        
+        this.sentences.push(pattern);
+        this.sentenceTemplates.push(pattern.toTemplate(this.patternTrie));
+      }
+    }
     
   };
   
