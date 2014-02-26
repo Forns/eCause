@@ -142,8 +142,8 @@ module.exports = function (tools) {
         purgedCorpus = [],
         taggedSentences = [],
         topicModels = [],
-        combinedTopics = {},
         topicPOS = [],
+        combinedTopics = {},
         concepts = {},
         movements = {};
         
