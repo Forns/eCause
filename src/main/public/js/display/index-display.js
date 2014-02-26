@@ -15,6 +15,7 @@ $(function () {
             changeText = "In progress...";
           }
           if (i < stage) {
+            $("[stage='" + i + "']").parent().addClass("success");
             changeText = "<span class='glyphicon glyphicon-check'></span> Done!";
           }
           
@@ -22,6 +23,16 @@ $(function () {
             .html(changeText);
           stagesComplete = stage;
         }
+      },
+      
+      errorModal = function (textStatus) {
+        $("#popup").modal("hide");
+          modalPopup.errorPane(
+            "body",
+            "main-modal-popup",
+            "Error",
+            (textStatus) ? textStatus : "Unknown! Try again shortly..."
+          );
       },
       
       validObject = validationConfig(formId, function () {
@@ -75,18 +86,17 @@ $(function () {
                         "<button type='button' class='btn btn-primary' data-dismiss='modal' aria-hidden='true'>View Results</button>"
                       );
                   }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                  clearInterval(progressTick);
+                  errorModal(textStatus);
                 }
               });
             }, 2000);
           },
           error: function (jqXHR, textStatus, errorThrown) {
-            $("#popup").modal("hide");
-            modalPopup.errorPane(
-              "body",
-              "main-modal-popup",
-              "Error",
-              (textStatus) ? textStatus : "Unknown! Try again shortly..."
-            );
+            clearInterval(progressTick);
+            errorModal(textStatus);
           }
         });
       });

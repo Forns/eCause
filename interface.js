@@ -152,7 +152,6 @@ app.use(function(req, res){
 /*
  * SERVER START
  */
-console.log(process.pid);
 app.listen((status.ROLE === "interface") ? interfacePort : analysisPort);
 console.log('[!] ' + new Date().toDateString() + ': Express server listening on port in %s mode', app.settings.env);
 
