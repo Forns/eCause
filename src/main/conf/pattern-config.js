@@ -130,16 +130,24 @@ module.exports = function (natural, WNdb, pos, status) {
   
   PatternCollection = this.PatternCollection = function () {
     this.verbTrie = new Trie(false);
+    this.movementTrie = new Trie(false);
     this.conceptTrie = new Trie(false);
     this.patternTrie = new Trie(false);
+    // Holds the tagged sentences
     this.sentences = [];
+    // Holds the tagged sentence templates
     this.sentenceTemplates = [];
+    // Holds only the templates that are relevant
+    this.putativeTemplates = [];
+    // Holds only the templates that aren't relevant
+    this.unresolvedTemplates = [];
+    // Holds the putative causal relations; maps that have:
+      // reason: term with a concept
+      // consequence: term with a movement
+    this.putativeCausation = [];
     
     // Set up the verb Trie
-    for (var v in causalVerbs) {
-      causalVerbs[v] = stemmer.stem(causalVerbs[v]);
-    }
-    this.verbTrie.addStrings(causalVerbs);
+    this.addCausalVerbs(causalVerbs);
     
     // Set up the pattern part of speech Trie
     this.patternTrie.addStrings(patternPOS);
@@ -158,6 +166,13 @@ module.exports = function (natural, WNdb, pos, status) {
       this.verbTrie.addStrings(verbs);
     },
     
+    addMovements: function (movements) {
+      for (var m in movements) {
+        movements[m] = stemmer.stem(movements[m]);
+      }
+      this.movementTrie.addStrings(movements);
+    },
+    
     addConcepts: function (concepts) {
       for (var c in concepts) {
         concepts[c] = stemmer.stem(concepts[c]);
@@ -173,8 +188,12 @@ module.exports = function (natural, WNdb, pos, status) {
             pattern.elements[e].isConcept = true;
             pattern.isRelevant = true;
           }
-          if (this.verbTrie.contains(pattern.elements[e].stem)) {
+          if (this.movementTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isMovement = true;
+            pattern.isRelevant = true;
+          }
+          if (this.verbTrie.contains(pattern.elements[e].stem)) {
+            pattern.elements[e].isCausal = true;
             pattern.isRelevant = true;
           }
         }

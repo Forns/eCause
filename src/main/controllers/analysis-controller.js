@@ -165,11 +165,15 @@ module.exports = function (tools) {
     POSFilter(combinedTopics, function (concepts, movements) {
       taggedSentences = getTaggedSentences(purgedCorpus);
       patternKB.addConcepts(concepts);
-      patternKB.addCausalVerbs(movements);
+      patternKB.addMovements(movements);
       patternKB.addPatterns(taggedSentences);
       
       for (var s in patternKB.sentenceTemplates) {
-        console.log(patternKB.sentenceTemplates[s].toTemplateString());
+        if (patternKB.sentences[s].isRelevant) {
+          console.log(patternKB.sentences[s].toString());
+          console.log(patternKB.sentenceTemplates[s].toTemplateString());
+          console.log("===============");
+        }
       }
       
       updateProgress(reqIp, 3);
