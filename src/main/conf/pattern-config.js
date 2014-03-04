@@ -15,7 +15,22 @@ module.exports = function (natural, WNdb, pos, status) {
       
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
       causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
-
+  
+  // Process the synonyms for each causal verb
+  (function () {
+    var originalCount = causalVerbs.length;
+    for (var i = 0; i < originalCount; i++) {
+      wordnet.lookup(causalVerbs[i], function (results) {
+        results.forEach(function (result) {
+          var pos = result.pos;
+          if (pos === "v") {
+            causalVerbs = causalVerbs.concat(result.synonyms);
+          }
+        });
+      });
+    }
+  })();
+  
   Pattern = this.Pattern = function (sentence) {
     this.elements = [];
     this.templated = false;
@@ -92,6 +107,9 @@ module.exports = function (natural, WNdb, pos, status) {
         if (currentElement.isMovement) {
           toPush.isMovement = true;
         }
+        if (currentElement.isCausal) {
+          toPush.isCausal = true;
+        }
         
         result.elements.push(toPush);
       }
@@ -117,6 +135,7 @@ module.exports = function (natural, WNdb, pos, status) {
         var currentElement = this.elements[e];
         result += ((currentElement.isConcept && currentElement.tag[0] === "N") ? "[concept]/" : "") + 
                   ((currentElement.isMovement && currentElement.tag[0] === "V") ? "[movement]/" : "") +
+                  ((currentElement.isCausal && currentElement.tag[0] === "V") ? "[cause]/" : "") +
                   currentElement.tag + " ";
       }
       return result.trim();
@@ -182,21 +201,26 @@ module.exports = function (natural, WNdb, pos, status) {
     
     addPatterns: function (patterns) {
       for (var p in patterns) {
-        var pattern = patterns[p];
+        var pattern = patterns[p],
+            hasConcept = false,
+            hasMovement = false,
+            hasCause = false;
         for (var e in pattern.elements) {
           if (this.conceptTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isConcept = true;
-            pattern.isRelevant = true;
+            hasConcept = true;
           }
           if (this.movementTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isMovement = true;
-            pattern.isRelevant = true;
+            hasMovement = true;
           }
           if (this.verbTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isCausal = true;
-            pattern.isRelevant = true;
+            hasCause = true;
           }
         }
+        
+        pattern.isRelevant = hasCause;
         
         this.sentences.push(pattern);
         this.sentenceTemplates.push(pattern.toTemplate(this.patternTrie));

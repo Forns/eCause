@@ -100,15 +100,12 @@ module.exports = function (tools) {
         for (var t in combinedTopics) {
           (function (t) {
             wordnet.lookup(t, function (results) {
-              console.log(t);
               results.forEach(function (result) {
                 var pos = result.pos;
                 if (pos === "n") {concepts[t] = 1;}
                 if (pos === "v") {movements[t] = 1;}
               });
               total++;
-              console.log(total);
-              console.log(Object.keys(combinedTopics).length);
               if (total >= Object.keys(combinedTopics).length) {
                 // Integrate findings into the Pattern class
                 callback(Object.keys(concepts), Object.keys(movements));
