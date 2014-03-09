@@ -57,12 +57,14 @@ module.exports = function (tools) {
     res.send(200);
   });
   
+  
   app.post("/search", function (req, res) {
     google.resultsPerPage = 8;
     var parsed = 0
-        corpus = [];
+        corpus = [],
+        searchTerm = "World War II";
     
-    google('World War II', function(err, next, links){
+    google(searchTerm, function(err, next, links){
       if (err) {
         console.error(err);
         res.send(500, {error: err});
@@ -92,6 +94,7 @@ module.exports = function (tools) {
                   url: "http://localhost:" + status.analysisPort + "/analyze",
                   form: {
                     corpus: corpus,
+                    searchTerm: searchTerm,
                     reqIp: req.ip
                   }
                 },

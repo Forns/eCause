@@ -109,6 +109,7 @@ module.exports = function (natural, WNdb, pos, status) {
         }
         if (currentElement.isCausal) {
           toPush.isCausal = true;
+          result.isRelevant = true;
         }
         
         result.elements.push(toPush);
@@ -202,6 +203,7 @@ module.exports = function (natural, WNdb, pos, status) {
     addPatterns: function (patterns) {
       for (var p in patterns) {
         var pattern = patterns[p],
+            putativePattern,
             hasConcept = false,
             hasMovement = false,
             hasCause = false;
@@ -221,9 +223,77 @@ module.exports = function (natural, WNdb, pos, status) {
         }
         
         pattern.isRelevant = hasCause;
+        putativePattern = pattern.toTemplate(this.patternTrie);
         
         this.sentences.push(pattern);
-        this.sentenceTemplates.push(pattern.toTemplate(this.patternTrie));
+        this.sentenceTemplates.push(putativePattern);
+      }
+    },
+    
+    relevantTerms: function (pattern, begin, end) {
+      var hasConcept = false,
+          hasMovement = false;
+          
+      for (var i = begin; i < end; i++) {
+        if (pattern[i].isConcept) {
+          hasConcept = true;
+        }
+        if (pattern[i].isMovement) {
+          hasMovement = true;
+        }
+      }
+      return {
+        plausibleReason: hasConcept,
+        plausibleConsequence: (hasConcept && hasMovement)
+      };
+    },
+    
+    // We'll split our relevant patterns into the templates that have an
+    // immediately causal structure, and those that don't
+    findPutativeTemplates: function () {
+      for (var p in this.sentenceTemplates) {
+        var currentTemplate = this.sentenceTemplates[p],
+            currentElements = currentTemplate.elements;
+        
+        if (!currentTemplate.isRelevant) {
+          // We'll try these unresolved templates again later once we've
+          // built up our template library
+          this.unresolvedTemplates.push(currentTemplate);
+          continue;
+        }
+        
+        // Now, we have to find the causal verb(s) and split the sentence
+        // into reason and consequence
+        for (var i = 0; i < currentElements.length; i++) {
+          // We'll assess whether or not the clauses to the left and right of
+          // a causal verb can be reasons or consequences
+          if (currentElements[i].isCausal) {
+            console.log("===================");
+            console.log("[!] IS CAUSAL");
+            console.log(currentTemplate.toString());
+            var leftClause = this.relevantTerms(currentElements, 0, i),
+                rightClause = this.relevantTerms(currentElements, i + 1, currentElements.length);
+            console.log(leftClause);
+            console.log(rightClause);
+                
+            if (leftClause.plausibleReason && rightClause.plausibleConsequence) {
+              this.putativeTemplates.push({
+                reason: currentElements.slice(0, i),
+                consequence: currentElements.slice(i + 1, currentElements.length)
+              });
+            } else if (rightClause.plausibleReason && leftClause.plausibleConsequence) {
+              this.putativeTemplates.push({
+                reason: currentElements.slice(i + 1, currentElements.length),
+                consequence: currentElements.slice(0, i)
+              });
+              
+            // If there isn't a match for a reason / consequence, we'll revisit that sentence
+            // later and see if we can match based on an established template
+            } else {
+              this.unresolvedTemplates.push(currentTemplate);
+            }
+          }
+        }
       }
     }
     

@@ -138,6 +138,7 @@ module.exports = function (tools) {
   app.post("/analyze", function (req, res) {
     var inputs = req.body,
         reqIp = inputs.reqIp,
+        searchTerm = inputs.searchTerm,
         corpus = inputs.corpus,
         purgedCorpus = [],
         taggedSentences = [],
@@ -146,6 +147,7 @@ module.exports = function (tools) {
         topicPOS = [],
         combinedTopics = {},
         patternKB = new PatternCollection();
+        
         
     // The purged corpus contains all documents from the
     // original that had content, now purged of irrelevant
@@ -164,14 +166,17 @@ module.exports = function (tools) {
       patternKB.addConcepts(concepts);
       patternKB.addMovements(movements);
       patternKB.addPatterns(taggedSentences);
+      patternKB.findPutativeTemplates();
       
-      for (var s in patternKB.sentenceTemplates) {
-        if (patternKB.sentences[s].isRelevant) {
-          console.log(patternKB.sentences[s].toString());
-          console.log(patternKB.sentenceTemplates[s].toTemplateString());
-          console.log("===============");
-        }
+      /*
+      for (var p in patternKB.putativeTemplates) {
+        console.log(patternKB.putativeTemplates[p]);
       }
+      console.log("============ UNRESOLVED TEMPLATES ===============");
+      for (var p in patternKB.unresolvedTemplates) {
+        console.log(patternKB.unresolvedTemplates[p]);
+      }
+      */
       
       updateProgress(reqIp, 3);
       res.send(200);
