@@ -101,6 +101,9 @@ module.exports = function (natural, WNdb, pos, status) {
           }
         }
         
+        if (currentElement.isMainConcept) {
+          toPush.isMainConcept = true;
+        }
         if (currentElement.isConcept) {
           toPush.isConcept = true;
         }
@@ -151,6 +154,7 @@ module.exports = function (natural, WNdb, pos, status) {
   PatternCollection = this.PatternCollection = function () {
     this.verbTrie = new Trie(false);
     this.movementTrie = new Trie(false);
+    this.mainConceptTrie = new Trie(false);
     this.conceptTrie = new Trie(false);
     this.patternTrie = new Trie(false);
     // Holds the tagged sentences
@@ -200,14 +204,44 @@ module.exports = function (natural, WNdb, pos, status) {
       this.conceptTrie.addStrings(concepts);
     },
     
+    addMainConcepts: function (searchTerm, callback) {
+      var collection = this;
+      wordnet.lookup(searchTerm, function (results) {
+        var count = 0;
+        results.forEach(function (result) {
+          var pos = result.pos,
+              syns = [];
+          count++;
+          if (pos === "n") {
+            for (var s in result.synonyms) {
+              syns = syns.concat(result.synonyms[s].split("_"));
+            }
+            for (var s in syns) {
+              syns[s] = stemmer.stem(syns[s]);
+            }
+            collection.mainConceptTrie.addStrings(syns);
+          }
+          
+          if (count >= results.length) {
+            callback();
+          }
+        });
+      });
+    },
+    
     addPatterns: function (patterns) {
       for (var p in patterns) {
         var pattern = patterns[p],
             putativePattern,
+            hasMain = false,
             hasConcept = false,
             hasMovement = false,
             hasCause = false;
         for (var e in pattern.elements) {
+          if (this.mainConceptTrie.contains(pattern.elements[e].stem)) {
+            pattern.elements[e].isMainConcept = true;
+            hasMainConcept = true;
+          }
           if (this.conceptTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isConcept = true;
             hasConcept = true;
@@ -222,7 +256,7 @@ module.exports = function (natural, WNdb, pos, status) {
           }
         }
         
-        pattern.isRelevant = hasCause;
+        pattern.isRelevant = hasMainConcept;
         putativePattern = pattern.toTemplate(this.patternTrie);
         
         this.sentences.push(pattern);
@@ -232,9 +266,13 @@ module.exports = function (natural, WNdb, pos, status) {
     
     relevantTerms: function (pattern, begin, end) {
       var hasConcept = false,
+          hasMainConcept = false,
           hasMovement = false;
           
       for (var i = begin; i < end; i++) {
+        if (pattern[i].isMainConcept) {
+          hasMainConcept = true;
+        }
         if (pattern[i].isConcept) {
           hasConcept = true;
         }
@@ -243,8 +281,9 @@ module.exports = function (natural, WNdb, pos, status) {
         }
       }
       return {
-        plausibleReason: hasConcept,
-        plausibleConsequence: (hasConcept && hasMovement)
+        hasMainConcept: hasMainConcept,
+        plausibleReason: hasConcept || hasMainConcept,
+        plausibleConsequence: (hasConcept && hasMovement) || hasMainConcept
       };
     },
     
@@ -268,20 +307,23 @@ module.exports = function (natural, WNdb, pos, status) {
           // We'll assess whether or not the clauses to the left and right of
           // a causal verb can be reasons or consequences
           if (currentElements[i].isCausal) {
+            var leftClause = this.relevantTerms(currentElements, 0, i),
+                rightClause = this.relevantTerms(currentElements, i + 1, currentElements.length);
+            
+            /*
             console.log("===================");
             console.log("[!] IS CAUSAL");
             console.log(currentTemplate.toString());
-            var leftClause = this.relevantTerms(currentElements, 0, i),
-                rightClause = this.relevantTerms(currentElements, i + 1, currentElements.length);
             console.log(leftClause);
             console.log(rightClause);
+            */
                 
-            if (leftClause.plausibleReason && rightClause.plausibleConsequence) {
+            if (leftClause.plausibleReason && rightClause.plausibleConsequence && (leftClause.hasMainConcept || rightClause.hasMainConcept)) {
               this.putativeTemplates.push({
                 reason: currentElements.slice(0, i),
                 consequence: currentElements.slice(i + 1, currentElements.length)
               });
-            } else if (rightClause.plausibleReason && leftClause.plausibleConsequence) {
+            } else if (rightClause.plausibleReason && leftClause.plausibleConsequence && (leftClause.hasMainConcept || rightClause.hasMainConcept)) {
               this.putativeTemplates.push({
                 reason: currentElements.slice(i + 1, currentElements.length),
                 consequence: currentElements.slice(0, i)
@@ -294,6 +336,50 @@ module.exports = function (natural, WNdb, pos, status) {
             }
           }
         }
+      }
+    },
+    
+    getComponents: function (clause) {
+      var construct = {};
+      for (var e in clause) {
+        var currentElement = clause[e];
+        
+        // TODO: Figure out why everything is war >_<
+        
+        (function () {
+          if (currentElement.isMainConcept) {
+            if (!construct.mainConcept) {
+              construct.mainConcept = currentElement.concept;
+            }
+          }
+          if (currentElement.isConcept) {
+            if (!construct.concept) {
+              construct.concept = currentElement.concept;
+            }
+          }
+          if (currentElement.isMovement) {
+            if (!construct.movement) {
+              construct.movement = currentElement.concept;
+            }
+          }
+        })(currentElement);
+      }
+      return construct;
+    },
+    
+    causalExtraction: function () {
+      for (var t in this.putativeTemplates) {
+        var currentTemplate = this.putativeTemplates[t],
+            currentReason = currentTemplate.reason,
+            reasonConstruct = this.getComponents(currentReason),
+            currentConsequence = currentTemplate.consequence,
+            consequenceConstruct = this.getComponents(currentConsequence),
+            currentResult = {
+              reason: reasonConstruct,
+              consequence: consequenceConstruct
+            };
+            
+        this.putativeCausation.push(currentResult);
       }
     }
     

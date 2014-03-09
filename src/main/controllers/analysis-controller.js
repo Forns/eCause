@@ -163,23 +163,41 @@ module.exports = function (tools) {
     // Now we'll start looking at the semantic analysis
     POSFilter(combinedTopics, function (concepts, movements) {
       taggedSentences = getTaggedSentences(purgedCorpus);
-      patternKB.addConcepts(concepts);
-      patternKB.addMovements(movements);
-      patternKB.addPatterns(taggedSentences);
-      patternKB.findPutativeTemplates();
-      
-      /*
-      for (var p in patternKB.putativeTemplates) {
-        console.log(patternKB.putativeTemplates[p]);
-      }
-      console.log("============ UNRESOLVED TEMPLATES ===============");
-      for (var p in patternKB.unresolvedTemplates) {
-        console.log(patternKB.unresolvedTemplates[p]);
-      }
-      */
-      
-      updateProgress(reqIp, 3);
-      res.send(200);
+      patternKB.addMainConcepts(searchTerm, function () {
+        // Now, we have our main concepts that center around
+        // the search term, and can examine auxiliary concepts
+        patternKB.addConcepts(concepts);
+        patternKB.addMovements(movements);
+        patternKB.addPatterns(taggedSentences);
+        patternKB.findPutativeTemplates();
+        patternKB.causalExtraction();
+        
+        for (var c in patternKB.putativeCausation) {
+          console.log(patternKB.putativeCausation[c]);
+        }
+        
+        /*
+        for (var p in patternKB.putativeTemplates) {
+          var holder = "";
+          for (var x in patternKB.putativeTemplates[p].reason) {
+            holder += " " + patternKB.putativeTemplates[p].reason[x].concept;
+          }
+          console.log("Reason: " + holder);
+          holder = "";
+          for (var x in patternKB.putativeTemplates[p].consequence) {
+            holder += " " + patternKB.putativeTemplates[p].consequence[x].concept;
+          }
+          console.log("Consequence: " + holder);
+        }
+        console.log("============ UNRESOLVED TEMPLATES ===============");
+        for (var p in patternKB.unresolvedTemplates) {
+          console.log(patternKB.unresolvedTemplates[p]);
+        }
+        */
+        
+        updateProgress(reqIp, 3);
+        res.send(200);
+      });
     });
     
   });
