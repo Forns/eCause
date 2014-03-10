@@ -21,14 +21,15 @@ module.exports = function (tools) {
       Pattern = tools.Pattern,
       PatternContainer = tools.PatternContainer,
       
-      updateProgress = function (reqIp, stage) {
+      updateProgress = function (reqIp, stage, results) {
         console.log("Progress Update: " + stage);
         request.post(
           {
             url: "http://localhost:" + status.interfacePort + "/progress",
             form: {
               reqIp: reqIp,
-              stage: stage
+              stage: stage,
+              results: results
             }
           },
           function (err, response, body) {
@@ -164,19 +165,22 @@ module.exports = function (tools) {
     POSFilter(combinedTopics, function (concepts, movements) {
       taggedSentences = getTaggedSentences(purgedCorpus);
       patternKB.addMainConcepts(searchTerm, function () {
+        updateProgress(reqIp, 3);
         // Now, we have our main concepts that center around
         // the search term, and can examine auxiliary concepts
         patternKB.addConcepts(concepts);
+        console.log(concepts);
         patternKB.addMovements(movements);
+        console.log(movements);
         patternKB.addPatterns(taggedSentences);
         patternKB.findPutativeTemplates();
         patternKB.causalExtraction();
         
+        /*
         for (var c in patternKB.putativeCausation) {
           console.log(patternKB.putativeCausation[c]);
         }
         
-        /*
         for (var p in patternKB.putativeTemplates) {
           var holder = "";
           for (var x in patternKB.putativeTemplates[p].reason) {
@@ -195,7 +199,7 @@ module.exports = function (tools) {
         }
         */
         
-        updateProgress(reqIp, 3);
+        updateProgress(reqIp, 4, patternKB.putativeCausation);
         res.send(200);
       });
     });

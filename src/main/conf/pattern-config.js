@@ -14,8 +14,9 @@ module.exports = function (natural, WNdb, pos, status) {
       tagger = new pos.Tagger(),
       
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
-      causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
-  
+      // causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
+      causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect"];
+      
   // Process the synonyms for each causal verb
   (function () {
     var originalCount = causalVerbs.length;
@@ -101,18 +102,20 @@ module.exports = function (natural, WNdb, pos, status) {
           }
         }
         
-        if (currentElement.isMainConcept) {
-          toPush.isMainConcept = true;
-        }
-        if (currentElement.isConcept) {
-          toPush.isConcept = true;
-        }
-        if (currentElement.isMovement) {
-          toPush.isMovement = true;
-        }
-        if (currentElement.isCausal) {
-          toPush.isCausal = true;
-          result.isRelevant = true;
+        if (toPush.tag !== "*") {
+          if (currentElement.isMainConcept) {
+            toPush.isMainConcept = true;
+          }
+          if (currentElement.isConcept) {
+            toPush.isConcept = true;
+          }
+          if (currentElement.isMovement) {
+            toPush.isMovement = true;
+          }
+          if (currentElement.isCausal) {
+            toPush.isCausal = true;
+            result.isRelevant = true;
+          }
         }
         
         result.elements.push(toPush);
@@ -283,7 +286,7 @@ module.exports = function (natural, WNdb, pos, status) {
       return {
         hasMainConcept: hasMainConcept,
         plausibleReason: hasConcept || hasMainConcept,
-        plausibleConsequence: (hasConcept && hasMovement) || hasMainConcept
+        plausibleConsequence: (hasConcept || hasMainConcept) && hasMovement
       };
     },
     
@@ -334,33 +337,30 @@ module.exports = function (natural, WNdb, pos, status) {
             } else {
               this.unresolvedTemplates.push(currentTemplate);
             }
+            break;
           }
         }
       }
     },
     
     getComponents: function (clause) {
-      var construct = {};
+      var construct = {
+        mainConcept: "",
+        concept: "",
+        movement: ""
+      };
       for (var e in clause) {
         var currentElement = clause[e];
         
-        // TODO: Figure out why everything is war >_<
-        
         (function () {
           if (currentElement.isMainConcept) {
-            if (!construct.mainConcept) {
-              construct.mainConcept = currentElement.concept;
-            }
+            construct.mainConcept += currentElement.concept + " ";
           }
           if (currentElement.isConcept) {
-            if (!construct.concept) {
-              construct.concept = currentElement.concept;
-            }
+            construct.concept += currentElement.concept + " ";
           }
           if (currentElement.isMovement) {
-            if (!construct.movement) {
-              construct.movement = currentElement.concept;
-            }
+            construct.movement += currentElement.concept + " ";
           }
         })(currentElement);
       }

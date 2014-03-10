@@ -6,7 +6,7 @@ $(function () {
       searchTerm = $("#search-term"),
       
       progressTick,
-      totalStages = 3,
+      totalStages = 4,
       stagesComplete = 0,
       progressUpdate = function (stage) {
         for (var i = 0; i <= stage; i++) {
@@ -57,6 +57,10 @@ $(function () {
                 "<th>Finding patterns...</th>" +
                 "<td id='progress-documents' class='prog' stage='2'>-</td>" +
               "</tr>" +
+              "<tr>" +
+                "<th>Extracting causality...</th>" +
+                "<td id='progress-documents' class='prog' stage='3'>-</td>" +
+              "</tr>" +
             "</tbody>" +
           "</table>",
           ""
@@ -85,6 +89,30 @@ $(function () {
                       .append(
                         "<button type='button' class='btn btn-primary' data-dismiss='modal' aria-hidden='true'>View Results</button>"
                       );
+                    $("#popup .modal-title")
+                      .html("Done!");
+                  }
+                  
+                  // If we have results, display them!
+                  if (results.results) {
+                    var causality = results.results,
+                        table = $("#output-results");
+                    for (var c in causality) {
+                      var currentCausal = causality[c],
+                          currentReason = currentCausal.reason,
+                          currentConsequence = currentCausal.consequence;
+                      table.append(
+                        "<tr>" +
+                          "<td>" + currentConsequence.concept +  "</td>" + 
+                          "<td>" + currentConsequence.movement + "</td>" + 
+                          "<td>" + currentReason.concept +  "</td>" + 
+                          "<td>" + currentReason.movement + "</td>" + 
+                        "</tr>"
+                      );
+                    }
+                    
+                    $("#output")
+                      .removeClass("hidden");
                   }
                 },
                 error: function (jqXHR, textStatus, errorThrown) {

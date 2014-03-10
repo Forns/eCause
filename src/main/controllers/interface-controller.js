@@ -39,7 +39,10 @@ module.exports = function (tools) {
   });
   
   app.get("/progress", function (req, res) {
-    res.send(200, {progress: (ipLog[req.ip] >= 0) ? ipLog[req.ip] : -1});
+    res.send(200, {
+      progress: (ipLog[req.ip].stage >= 0) ? ipLog[req.ip].stage : -1,
+      results: ipLog[req.ip].results
+    });
   });
   
 
@@ -50,21 +53,22 @@ module.exports = function (tools) {
   app.post("/progress", function (req, res) {
     var inputs = req.body,
         reqIp = inputs.reqIp,
-        stage = inputs.stage;
+        stage = inputs.stage,
+        results = inputs.results;
         
-    ipLog[reqIp] = parseInt(stage);
-    console.log(ipLog);
+    ipLog[reqIp].stage = parseInt(stage);
+    ipLog[reqIp].results = results;
     res.send(200);
   });
   
   
   app.post("/search", function (req, res) {
-    google.resultsPerPage = 8;
+    google.resultsPerPage = 25;
     var parsed = 0
         corpus = [],
-        searchTerm = "World War II";
+        searchTerm = "global warming";
     
-    google(searchTerm, function(err, next, links){
+    google("causes of " + searchTerm, function(err, next, links){
       if (err) {
         console.error(err);
         res.send(500, {error: err});
@@ -88,7 +92,10 @@ module.exports = function (tools) {
             parsed++;
             if (parsed == google.resultsPerPage) {
               console.log("[!] Passed to analysis!");
-              ipLog[req.ip] = 1;
+              ipLog[req.ip] = {
+                stage: 1,
+                results: null
+              };
               request.post(
                 {
                   url: "http://localhost:" + status.analysisPort + "/analyze",
