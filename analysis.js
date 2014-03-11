@@ -68,7 +68,7 @@ app.configure(function () {
   app.set('view options', {
     layout: false
   });
-  app.use(express.bodyParser());
+  app.use(express.bodyParser({limit: '50mb'}));
   app.use(expressValidator());
   app.use(express.methodOverride());
   app.use(express.cookieParser());

@@ -164,14 +164,15 @@ module.exports = function (tools) {
     // Now we'll start looking at the semantic analysis
     POSFilter(combinedTopics, function (concepts, movements) {
       taggedSentences = getTaggedSentences(purgedCorpus);
+      var conceptReport = concepts.slice(0),
+          movementReport = movements.slice(0);
+          
       patternKB.addMainConcepts(searchTerm, function () {
         updateProgress(reqIp, 3);
         // Now, we have our main concepts that center around
         // the search term, and can examine auxiliary concepts
         patternKB.addConcepts(concepts);
-        console.log(concepts);
         patternKB.addMovements(movements);
-        console.log(movements);
         patternKB.addPatterns(taggedSentences);
         patternKB.findPutativeTemplates();
         patternKB.causalExtraction();
@@ -199,7 +200,13 @@ module.exports = function (tools) {
         }
         */
         
-        updateProgress(reqIp, 4, patternKB.putativeCausation);
+        updateProgress(reqIp, 4, {
+          results: patternKB.putativeCausation,
+          concepts: conceptReport,
+          movements: movementReport,
+          sentences: patternKB.sentences,
+          templates: patternKB.sentenceTemplates
+        });
         res.send(200);
       });
     });

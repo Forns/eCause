@@ -6,6 +6,7 @@ $(function () {
       searchTerm = $("#search-term"),
       
       progressTick,
+      loaded = false,
       totalStages = 4,
       stagesComplete = 0,
       progressUpdate = function (stage) {
@@ -23,6 +24,30 @@ $(function () {
             .html(changeText);
           stagesComplete = stage;
         }
+      },
+      
+      patternToString = function (pattern) {
+        var result = "";
+        for (var e in pattern.elements) {
+          var currentElement = pattern.elements[e];
+          result += currentElement.concept + "/" + currentElement.tag + " ";
+        }
+        return result.trim();
+      },
+      
+      patternToTemplateString = function (pattern) {
+        if (!pattern.templated) {
+          return pattern.toString();
+        }
+        var result = "";
+        for (var e in pattern.elements) {
+          var currentElement = pattern.elements[e];
+          result += ((currentElement.isConcept && currentElement.tag[0] === "N") ? "[concept]/" : "") + 
+                    ((currentElement.isMovement && currentElement.tag[0] === "V") ? "[movement]/" : "") +
+                    ((currentElement.isCausal && currentElement.tag[0] === "V") ? "[cause]/" : "") +
+                    currentElement.tag + " ";
+        }
+        return result.trim();
       },
       
       errorModal = function (textStatus) {
@@ -85,23 +110,72 @@ $(function () {
                   progressUpdate(results.progress);
                   if (results.progress >= totalStages) {
                     clearInterval(progressTick);
+                    if (loaded) {
+                      return;
+                    }
+                    loaded = true;
                     $("#popup .modal-footer")
                       .append(
-                        "<button type='button' class='btn btn-primary' data-dismiss='modal' aria-hidden='true'>View Results</button>"
+                        "<button id='view-results-button' type='button' class='btn btn-primary' data-dismiss='modal' aria-hidden='true'>View Results</button>"
                       );
+                    $("#view-results-button")
+                      .click(function () {
+                        loaded = false;
+                      });
                     $("#popup .modal-title")
                       .html("Done!");
                   }
                   
                   // If we have results, display them!
                   if (results.results) {
-                    var causality = results.results,
-                        table = $("#output-results");
+                    var findings = results.results,
+                        causality = findings.results,
+                        concepts = findings.concepts,
+                        movements = findings.movements,
+                        sentences = findings.sentences,
+                        templates = findings.templates,
+                        conceptString = "",
+                        movementString = "",
+                        conceptList = $("#concept-results"),
+                        movementList = $("#movement-results"),
+                        relevantTable = $("#relevant-results"),
+                        resultsTable = $("#output-results");
+                    
+                    // Set up topics table
+                    for (var c in concepts) {
+                      conceptString += concepts[c] + ", ";
+                    }
+                    conceptString = conceptString.substring(0, conceptString.length - 2);
+                    conceptList.html(conceptString);
+                    
+                    for (var m in movements) {
+                      movementString += movements[m] + ", ";
+                    }
+                    movementString = movementString.substring(0, movementString.length - 2);
+                    movementList.html(movementString);
+                    
+                    // Set up the relevant table
+                    relevantTable.html("");
+                    for (var s in sentences) {
+                      var currentSentence = sentences[s],
+                          currentTemplate = templates[s];
+                      
+                      relevantTable.append(
+                        "<tr>" +
+                          "<td>" + patternToString(currentSentence) + "</td>" +
+                          "<td>" + patternToTemplateString(currentTemplate) + "</td>" +
+                        "</tr>"
+                      );
+                    }
+                    
+                    // Set up results table
+                    resultsTable.html("");
                     for (var c in causality) {
                       var currentCausal = causality[c],
                           currentReason = currentCausal.reason,
                           currentConsequence = currentCausal.consequence;
-                      table.append(
+                          
+                      resultsTable.append(
                         "<tr>" +
                           "<td>" + currentConsequence.concept +  "</td>" + 
                           "<td>" + currentConsequence.movement + "</td>" + 

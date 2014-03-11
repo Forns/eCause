@@ -64,9 +64,10 @@ module.exports = function (tools) {
   
   app.post("/search", function (req, res) {
     google.resultsPerPage = 25;
-    var parsed = 0
+    var inputs = req.body,
+        parsed = 0
         corpus = [],
-        searchTerm = "global warming";
+        searchTerm = inputs.search;
     
     google("causes of " + searchTerm, function(err, next, links){
       if (err) {

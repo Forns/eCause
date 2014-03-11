@@ -13,20 +13,47 @@ block content
             div.form-group
               label.col-md-2.control-label(for="search-term") Find causal relations for:
               div.col-md-10
-                input#search-term.form-control(type="text", placeholder="World War II", maxlength="100").required
+                input#search-term.form-control(type="text", placeholder="Global Warming", maxlength="100").required
                 
             div.form-group.text
               button#login-button.btn.btn-default.submit-button(type="submit").pull-right 
                 span.glyphicon.glyphicon-check
-                | &nbsp Submit
+                | &nbsp; Submit
                 
           #output.hidden
-            table.table.table-striped
-              thead
-                tr
-                  th Reason
-                  th Reason Movement
-                  th Consequence
-                  th Consequence Movement
-              tbody#output-results
+            ul.nav.nav-tabs
+              li.active
+                a(href="#topics", data-toggle="tab") Concepts &amp; Movements
+              li
+                a(href="#relevant", data-toggle="tab") Sentences
+              li
+                a(href="#causal", data-toggle="tab") Causal Extraction
+                
+            div.tab-content
+            
+              div.tab-pane.fade.in.active#topics
+                h3 Concepts
+                #concept-results
+                
+                hr
+                h3 Movements
+                #movement-results
+                  
+              div.tab-pane.fade#relevant
+                table.table.table-striped
+                  thead
+                    tr
+                      th Relevant Sentences
+                      th Pattern
+                  tbody#relevant-results
+              
+              div.tab-pane.fade#causal
+                table.table.table-striped
+                  thead
+                    tr
+                      th Reason
+                      th Reason Movement
+                      th Consequence
+                      th Consequence Movement
+                  tbody#output-results
                 

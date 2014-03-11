@@ -88,6 +88,7 @@ module.exports = function (natural, WNdb, pos, status) {
             
           // Otherwise, it's a new entity to add
           } else {
+         
             toPush = {
               concept: currentElement.concept,
               tag: currentElement.tag,
@@ -236,7 +237,7 @@ module.exports = function (natural, WNdb, pos, status) {
       for (var p in patterns) {
         var pattern = patterns[p],
             putativePattern,
-            hasMain = false,
+            hasMainConcept = false,
             hasConcept = false,
             hasMovement = false,
             hasCause = false;
