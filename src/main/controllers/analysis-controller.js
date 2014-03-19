@@ -164,6 +164,7 @@ module.exports = function (tools) {
     // Now we'll start looking at the semantic analysis
     POSFilter(combinedTopics, function (concepts, movements) {
       taggedSentences = getTaggedSentences(purgedCorpus);
+      
       var conceptReport = concepts.slice(0),
           movementReport = movements.slice(0);
           
@@ -207,10 +208,10 @@ module.exports = function (tools) {
           sentences: patternKB.sentences,
           templates: patternKB.sentenceTemplates
         });
-        res.send(200);
       });
     });
     
+    res.send(200);
   });
   
 };

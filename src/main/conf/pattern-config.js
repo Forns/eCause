@@ -80,21 +80,11 @@ module.exports = function (natural, WNdb, pos, status) {
         // Check if given POS is acceptable to keep
         // for a template
         if (POSSplit[0] && POSSplit[1].length < 2) {
-          // Since it *is* worth keeping, check if we have something
-          // to add it to nearby
-          if (resultLength && currentElement.tag[0] === result.elements[resultLength-1].tag[0] && currentElement.tag[1] === result.elements[resultLength-1].tag[1]) {
-            result.elements[resultLength-1].concept += " " + currentElement.concept;
-            continue;
-            
-          // Otherwise, it's a new entity to add
-          } else {
-         
-            toPush = {
-              concept: currentElement.concept,
-              tag: currentElement.tag,
-              stem: currentElement.stem
-            };
-          }
+          toPush = {
+            concept: currentElement.concept,
+            tag: currentElement.tag,
+            stem: currentElement.stem
+          };
           
         // Otherwise, it's a wildcard to add
         } else {
@@ -209,12 +199,22 @@ module.exports = function (natural, WNdb, pos, status) {
     },
     
     addMainConcepts: function (searchTerm, callback) {
-      var collection = this;
+      var collection = this,
+          searchWords = searchTerm.split(" ");
+      
+      // First add the current main concept to the try,
+      // one by one
+      for (var s in searchWords) {
+        searchWords[s] = stemmer.stem(searchWords[s]);
+      }
+      collection.mainConceptTrie.addStrings(searchWords);
+      
       wordnet.lookup(searchTerm, function (results) {
         var count = 0;
         results.forEach(function (result) {
           var pos = result.pos,
               syns = [];
+              
           count++;
           if (pos === "n") {
             for (var s in result.synonyms) {
@@ -230,6 +230,11 @@ module.exports = function (natural, WNdb, pos, status) {
             callback();
           }
         });
+        
+        // In case there are no synonyms...
+        if (!results.length) {
+          callback();
+        }
       });
     },
     
@@ -312,26 +317,37 @@ module.exports = function (natural, WNdb, pos, status) {
           // a causal verb can be reasons or consequences
           if (currentElements[i].isCausal) {
             var leftClause = this.relevantTerms(currentElements, 0, i),
-                rightClause = this.relevantTerms(currentElements, i + 1, currentElements.length);
+                rightClause = this.relevantTerms(currentElements, i + 1, currentElements.length),
+                hasMain = leftClause.hasMainConcept || rightClause.hasMainConcept,
+                leftOK = false,
+                rightOK = false,
+                toPush;
             
-            /*
-            console.log("===================");
-            console.log("[!] IS CAUSAL");
-            console.log(currentTemplate.toString());
-            console.log(leftClause);
-            console.log(rightClause);
-            */
-                
-            if (leftClause.plausibleReason && rightClause.plausibleConsequence && (leftClause.hasMainConcept || rightClause.hasMainConcept)) {
-              this.putativeTemplates.push({
-                reason: currentElements.slice(0, i),
-                consequence: currentElements.slice(i + 1, currentElements.length)
-              });
-            } else if (rightClause.plausibleReason && leftClause.plausibleConsequence && (leftClause.hasMainConcept || rightClause.hasMainConcept)) {
-              this.putativeTemplates.push({
+            // Check the directionality of the causal verb
+            if (i + 1 < currentElements.length && currentElements[i].pos === "IN") {
+              // If there's a preposition following the verb, we'll assume that
+              // consequences will be on the left, e.g. "caused by"
+              leftOK = leftClause.plausibleConsequence;
+              rightOK = rightClause.plausibleReason;
+              toPush = {
                 reason: currentElements.slice(i + 1, currentElements.length),
                 consequence: currentElements.slice(0, i)
-              });
+              };
+              
+            // Otherwise, the reason is on the left
+            } else {
+              leftOK = leftClause.plausibleReason;
+              rightOK = rightClause.plausibleConsequence;
+              toPush = {
+                reason: currentElements.slice(0, i),
+                consequence: currentElements.slice(i + 1, currentElements.length)
+              };
+            }
+            
+            // Assuming our left and right clauses are appropriately structured, and
+            // at least one of them has a main concept, we have a putative match!
+            if (leftOK && rightOK && hasMain) {
+              this.putativeTemplates.push(toPush);
               
             // If there isn't a match for a reason / consequence, we'll revisit that sentence
             // later and see if we can match based on an established template
