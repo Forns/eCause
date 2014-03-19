@@ -361,26 +361,66 @@ module.exports = function (natural, WNdb, pos, status) {
     },
     
     getComponents: function (clause) {
-      var construct = {
-        mainConcept: "",
-        concept: "",
-        movement: ""
-      };
+      var mainConcepts = [],
+          concepts = [],
+          chosenConcept,
+          movements = [],
+          chosenMovement,
+          difference = -1,
+          construct = {};
+      
       for (var e in clause) {
         var currentElement = clause[e];
-        
         (function () {
           if (currentElement.isMainConcept) {
-            construct.mainConcept += currentElement.concept + " ";
+            mainConcepts.push({
+              index: e,
+              term: currentElement.concept
+            });
           }
           if (currentElement.isConcept) {
-            construct.concept += currentElement.concept + " ";
+            concepts.push({
+              index: e,
+              term: currentElement.concept
+            });
           }
           if (currentElement.isMovement) {
-            construct.movement += currentElement.concept + " ";
+            movements.push({
+              index: e,
+              term: currentElement.concept
+            });
           }
         })(currentElement);
       }
+      
+      // Analyze which concept and movement to use
+      (function (conceptArray) {
+        for (var c in conceptArray) {
+          var currentConcept = conceptArray[c];
+          if (difference === -1) {
+            chosenConcept = currentConcept;
+          }
+          
+          // Seed our comparator if this is the first
+          // concept we've encountered
+          for (var m in movements) {
+            var currentMovement = movements[m],
+                currentDistance = Math.abs(currentConcept.index - currentMovement.index);
+            if (difference === -1 || ((currentDistance < difference) && currentConcept.term !== currentMovement.term)) {
+              chosenConcept = currentConcept;
+              chosenMovement = currentMovement;
+              difference = currentDistance
+            }
+          }
+        }
+      })((mainConcepts.length) ? mainConcepts : concepts);
+      
+      // Finally, construct the... construct >_> <_<
+      construct = {
+        concept: chosenConcept.term,
+        movement: (chosenMovement) ? chosenMovement.term : ""
+      }
+      
       return construct;
     },
     
