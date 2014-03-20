@@ -15,7 +15,7 @@ module.exports = function (natural, WNdb, pos, status) {
       
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
       // causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
-      causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect"];
+      causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect", "due"];
       
   // Process the synonyms for each causal verb
   (function () {
@@ -163,6 +163,8 @@ module.exports = function (natural, WNdb, pos, status) {
       // reason: term with a concept
       // consequence: term with a movement
     this.putativeCausation = [];
+    this.causalReasons = {};
+    this.causalConsequences = {};
     
     // Set up the verb Trie
     this.addCausalVerbs(causalVerbs);
@@ -296,6 +298,28 @@ module.exports = function (natural, WNdb, pos, status) {
       };
     },
     
+    addCausalTemplate: function (template, type) {
+      var currentNode = (type === "reason") ? this.causalReasons : this.causalConsequences;
+      
+      // We'll construct a trie with our input template's nodes!
+      for (var t in template) {
+        var currentWord = template[t],
+            currentTag = currentWord.tag.substring(0, 2);
+            
+        if (currentWord.isConcept && currentTag !== "VB") {
+          currentTag[0] = "C";
+        }
+        if (currentWord.isMovement && currentTag === "VB") {
+          currentTag[0] = "M";
+        }
+            
+        if (!currentNode[currentTag]) {
+          currentNode[currentTag] = {};
+        }
+        currentNode = currentNode[currentTag];
+      }
+    },
+    
     // We'll split our relevant patterns into the templates that have an
     // immediately causal structure, and those that don't
     findPutativeTemplates: function () {
@@ -304,9 +328,6 @@ module.exports = function (natural, WNdb, pos, status) {
             currentElements = currentTemplate.elements;
         
         if (!currentTemplate.isRelevant) {
-          // We'll try these unresolved templates again later once we've
-          // built up our template library
-          this.unresolvedTemplates.push(currentTemplate);
           continue;
         }
         
@@ -348,16 +369,136 @@ module.exports = function (natural, WNdb, pos, status) {
             // at least one of them has a main concept, we have a putative match!
             if (leftOK && rightOK && hasMain) {
               this.putativeTemplates.push(toPush);
+              this.addCausalTemplate(toPush.reason, "reason");
+              this.addCausalTemplate(toPush.consequence, "consequence");
               
             // If there isn't a match for a reason / consequence, we'll revisit that sentence
             // later and see if we can match based on an established template
             } else {
-              this.unresolvedTemplates.push(currentTemplate);
+              this.unresolvedTemplates.push(toPush);
             }
             break;
           }
         }
       }
+    },
+    
+    scoreMatch: function (candidate, type) {
+      var currentNode = (type === "reason") ? this.causalReasons : this.causalConsequences,
+          candidateWords = 0,
+          runningScore = 0,
+          conceptLocations = [],
+          movementLocations = [];
+          
+      for (var c in candidate) {
+        candidateWords++;
+        var currentCandidateWord = candidate[c],
+            currentTag = currentCandidateWord.tag.substring(0, 2),
+            hasWildcard = false,
+            matchScore = 0,
+            bestMatch,
+            patternTrieFind;
+            
+        if (!currentNode) {continue;}
+        
+        for (var t in currentNode) {
+          var currentTemplateMatch = currentNode[t];
+          if (t === "*") {
+            hasWildcard = true;
+          }
+          if (t === currentTag) {
+            matchScore = 0.8;
+            if (t === "NN") {conceptLocations.push(c);}
+            if (t === "VB") {movementLocations.push(c);}
+            if (matchScore <= 0.8) {
+              bestMatch = currentTemplateMatch;
+            }
+          }
+          if ((t === "CN" && currentTag === "NN") || (t === "MB" && currentTag === "VB")) {
+            if (t === "CN") {conceptLocations.push(c);}
+            if (t === "MB") {movementLocations.push(c);}
+            matchScore = 1;
+            bestMatch = currentTemplateMatch;
+          }
+        }
+        
+        if (bestMatch) {
+          runningScore += matchScore;
+          currentNode = currentTemplateMatch;
+        }
+        patternTrieFind = this.patternTrie.findPrefix(currentTag)[0];
+        if (patternTrieFind && patternTrieFind.length === 0 && hasWildcard) {
+          runningScore += 1;
+        }
+      }
+      
+      return {
+        score: runningScore / candidateWords,
+        conceptLocations: conceptLocations,
+        movementLocations: movementLocations
+      };
+    },
+    
+    findHiddenStructures: function () {
+      var result = [],
+          flagStructureElements = function (concepts, conceptPositions, movementPositions) {
+            var cIndex = -1,
+                mIndex = -1,
+                difference = -1;
+            for (var c in conceptPositions) {
+              for (var m in movementPositions) {
+                var newDifference = Math.abs(conceptPositions[c] - movementPositions[m]);
+                if (difference === -1 || newDifference < difference) {
+                  difference = newDifference;
+                  cIndex = conceptPositions[c];
+                  mIndex = movementPositions[m];
+                }
+              }
+            }
+            
+            // Now we check if the items at those locations need flagging
+            if (cIndex === -1) {
+              cIndex = conceptPositions[0];
+            }
+            if (cIndex) {
+              concepts[cIndex].isConcept = true;
+            }
+            if (mIndex !== -1) {
+              concepts[mIndex].isMovement = true;
+            }
+          };
+          
+      for (var t in this.unresolvedTemplates) {
+        var currentUnresolved = this.unresolvedTemplates[t],
+            currentReason = currentUnresolved.reason,
+            currentConsequence = currentUnresolved.consequence,
+            
+            reasonAnalysis = this.scoreMatch(currentReason, "reason"),
+            reasonScore = reasonAnalysis.score,
+            reasonConcepts = reasonAnalysis.conceptLocations,
+            reasonMovements = reasonAnalysis.movementLocations,
+            
+            consequenceAnalysis = this.scoreMatch(currentReason, "consequence"),
+            consequenceScore = consequenceAnalysis.score,
+            consequenceConcepts = consequenceAnalysis.conceptLocations,
+            consequenceMovements = consequenceAnalysis.movementLocations;
+            
+        if (currentReason.length < 4 || currentConsequence.length < 4 || reasonScore < 0.5 || consequenceScore < 0.5) {
+          continue;
+        }
+        
+        // At this point, we have structures that can possibly be matched
+        // We'll first flag some possible concepts / movements in our templates
+        if (!reasonConcepts.length || !consequenceConcepts.length) {
+          continue;
+        }
+        flagStructureElements(currentReason, reasonConcepts, reasonMovements);
+        flagStructureElements(currentConsequence, consequenceConcepts, consequenceMovements);
+        result.push(currentUnresolved);
+      }
+      
+      // Finally, update our unresolved templates
+      this.unresolvedTemplates = result;
     },
     
     getComponents: function (clause) {
@@ -424,9 +565,10 @@ module.exports = function (natural, WNdb, pos, status) {
       return construct;
     },
     
-    causalExtraction: function () {
-      for (var t in this.putativeTemplates) {
-        var currentTemplate = this.putativeTemplates[t],
+    causalExtraction: function (secondPass) {
+      var templateCollection = (secondPass) ? this.unresolvedTemplates : this.putativeTemplates;
+      for (var t in templateCollection) {
+        var currentTemplate = templateCollection[t],
             currentReason = currentTemplate.reason,
             reasonConstruct = this.getComponents(currentReason),
             currentConsequence = currentTemplate.consequence,
@@ -435,7 +577,8 @@ module.exports = function (natural, WNdb, pos, status) {
               reason: reasonConstruct,
               consequence: consequenceConstruct,
               reasonTemplate: currentReason,
-              consequenceTemplate: currentConsequence
+              consequenceTemplate: currentConsequence,
+              discovered: secondPass
             };
             
         this.putativeCausation.push(currentResult);

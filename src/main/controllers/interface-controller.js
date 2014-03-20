@@ -63,7 +63,7 @@ module.exports = function (tools) {
   
   
   app.post("/search", function (req, res) {
-    google.resultsPerPage = 25;
+    google.resultsPerPage = 50;
     var inputs = req.body,
         parsed = 0
         corpus = [],

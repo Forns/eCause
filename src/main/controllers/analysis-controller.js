@@ -176,8 +176,27 @@ module.exports = function (tools) {
         patternKB.addMovements(movements);
         patternKB.addPatterns(taggedSentences);
         patternKB.findPutativeTemplates();
-        patternKB.causalExtraction();
+        patternKB.causalExtraction(false);
+        patternKB.findHiddenStructures();
+        patternKB.causalExtraction(true);
         patternKB.causalCleanup(function () {
+          /*
+          var printOut = function (node, indent) {
+            if (typeof(node) === "undefined") {
+              return;
+            }
+            var spaces = "";
+            for (var i = 0; i < indent; i++) {
+              spaces += "  ";
+            }
+            for (var t in node) {
+              console.log(spaces + t);
+              printOut(node[t], indent + 1);
+            }
+          };
+          console.log("PRINTING TEMPLATES ==========");
+          printOut(patternKB.causalReasons, 0);
+          */
           
           // Done once we've cleaned everything up!
           updateProgress(reqIp, 4, {

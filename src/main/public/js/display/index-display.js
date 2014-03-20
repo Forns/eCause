@@ -173,10 +173,11 @@ $(function () {
                     for (var c in causality) {
                       var currentCausal = causality[c],
                           currentReason = currentCausal.reason,
-                          currentConsequence = currentCausal.consequence;
+                          currentConsequence = currentCausal.consequence,
+                          styling = (currentCausal.discovered === "true") ? "class='warning'" : "";
                           
                       resultsTable.append(
-                        "<tr>" +
+                        "<tr " + styling + ">" +
                           "<td>" + currentConsequence.concept +  "</td>" + 
                           "<td>" + currentConsequence.movement + "</td>" + 
                           "<td>" + currentReason.concept +  "</td>" + 
