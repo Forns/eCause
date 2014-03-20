@@ -406,7 +406,7 @@ module.exports = function (natural, WNdb, pos, status) {
           for (var m in movements) {
             var currentMovement = movements[m],
                 currentDistance = Math.abs(currentConcept.index - currentMovement.index);
-            if (difference === -1 || ((currentDistance < difference) && currentConcept.term !== currentMovement.term)) {
+            if ((difference === -1 || (currentDistance < difference)) && (currentConcept.term !== currentMovement.term)) {
               chosenConcept = currentConcept;
               chosenMovement = currentMovement;
               difference = currentDistance
@@ -520,9 +520,12 @@ module.exports = function (natural, WNdb, pos, status) {
     },
     
     causalsToTerms: function (callback) {
+      var causalTrie = new Trie(false),
+          result = [];
       // Replace the reasons and consequences with just their terms
       for (var c in this.putativeCausation) {
-        var currentCausal = this.putativeCausation[c];
+        var currentCausal = this.putativeCausation[c],
+            trieString;
         this.putativeCausation[c].consequence = {
           concept: currentCausal.consequence.concept.term,
           movement: (currentCausal.consequence.movement.term) ? currentCausal.consequence.movement.term : ""
@@ -531,7 +534,13 @@ module.exports = function (natural, WNdb, pos, status) {
           concept: currentCausal.reason.concept.term,
           movement: (currentCausal.reason.movement.term) ? currentCausal.reason.movement.term : ""
         };
+        trieString = currentCausal.consequence.concept + currentCausal.consequence.movement + currentCausal.reason.concept + currentCausal.reason.movement;
+        if (!causalTrie.contains(trieString)) {
+          causalTrie.addString(trieString);
+          result.push(currentCausal);
+        }
       }
+      this.putativeCausation = result;
       callback();
     }
     

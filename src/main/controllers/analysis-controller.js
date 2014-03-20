@@ -178,6 +178,7 @@ module.exports = function (tools) {
         patternKB.findPutativeTemplates();
         patternKB.causalExtraction();
         patternKB.causalCleanup(function () {
+          
           // Done once we've cleaned everything up!
           updateProgress(reqIp, 4, {
             results: patternKB.putativeCausation,
