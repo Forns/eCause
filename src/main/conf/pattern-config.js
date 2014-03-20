@@ -593,6 +593,9 @@ module.exports = function (natural, WNdb, pos, status) {
           collection = this,
           
           buildConcept = function (currentConcept, currentTemplate, iteration, next) {
+            if (!next) {
+              return;
+            }
             // Return if we've already looked ahead enough or would overflow the template
             // by looking at one more word
             if (iteration < 0 || currentConcept.concept.index + 1 >= currentTemplate.length) {
@@ -654,8 +657,10 @@ module.exports = function (natural, WNdb, pos, status) {
             }
             
             // Otherwise, we still have more relations to go through
-            buildConcept(currentReason, currentReasonTemplate, 2, nextFun);
-            buildConcept(currentConsequence, currentConsequenceTemplate, 2, nextFun);
+            if (nextFun) {
+              buildConcept(currentReason, currentReasonTemplate, 2, nextFun);
+              buildConcept(currentConsequence, currentConsequenceTemplate, 2, nextFun);
+            }
           };
           
       // Start it all off!
