@@ -417,8 +417,8 @@ module.exports = function (natural, WNdb, pos, status) {
       
       // Finally, construct the... construct >_> <_<
       construct = {
-        concept: chosenConcept.term,
-        movement: (chosenMovement) ? chosenMovement.term : ""
+        concept: chosenConcept,
+        movement: (chosenMovement) ? chosenMovement : {}
       }
       
       return construct;
@@ -433,11 +433,106 @@ module.exports = function (natural, WNdb, pos, status) {
             consequenceConstruct = this.getComponents(currentConsequence),
             currentResult = {
               reason: reasonConstruct,
-              consequence: consequenceConstruct
+              consequence: consequenceConstruct,
+              reasonTemplate: currentReason,
+              consequenceTemplate: currentConsequence
             };
             
         this.putativeCausation.push(currentResult);
       }
+    },
+    
+    causalCleanup: function (callback) {
+      var c = 0,
+          tryCount = 2,
+          lookAhead = 2,
+          currentCausal,
+          collection = this,
+          
+          buildConcept = function (currentConcept, currentTemplate, iteration, next) {
+            // Return if we've already looked ahead enough or would overflow the template
+            // by looking at one more word
+            if (iteration < 0 || currentConcept.concept.index + 1 >= currentTemplate.length) {
+              tryCount--;
+              next();
+              return;
+            }
+            
+            var currentTerm = currentConcept.concept.term,
+                currentIndex = currentConcept.concept.index;
+            
+            if (!currentTemplate[currentIndex + 1] || currentTemplate[currentIndex + 1].concept === "*") {
+              tryCount--;
+              next();
+              return;
+            }
+            
+            // We want to try to build onto our concept by seeing if the next
+            // word in the template goes logically with the one we've tagged
+            wordnet.lookup(currentTerm + " " + currentTemplate[currentIndex + 1].concept, function (results) {
+              if (results.length) {
+                currentConcept.term += " " + currentTemplate[currentIndex + 1].concept;
+                buildConcept(currentConcept, currentTemplate, --iteration);
+              } else {
+                tryCount--;
+                next();
+                return;
+              }
+            });
+            
+          },
+          
+          nextFun = function () {
+            if (c >= collection.putativeCausation.length) {
+              return;
+            }
+            
+            var currentCausal = collection.putativeCausation[c],
+                currentReasonTemplate = currentCausal.reasonTemplate,
+                currentConsequenceTemplate = currentCausal.consequenceTemplate,
+                currentReason = currentCausal.reason,
+                currentConsequence = currentCausal.consequence;
+            
+            
+            // If we're done trying to construct additional concepts,
+            // then move to the next relation
+            if (tryCount <= 0) {
+              // Reset tryCount before going to the next reason / consequence
+              tryCount = 2;
+              c++;
+              // Once we're done processing, call the callback!
+              if (c >= collection.putativeCausation.length) {
+                collection.causalsToTerms(callback);
+                return;
+              } else {
+                nextFun();
+                return;
+              }
+            }
+            
+            // Otherwise, we still have more relations to go through
+            buildConcept(currentReason, currentReasonTemplate, 2, nextFun);
+            buildConcept(currentConsequence, currentConsequenceTemplate, 2, nextFun);
+          };
+          
+      // Start it all off!
+      nextFun();
+    },
+    
+    causalsToTerms: function (callback) {
+      // Replace the reasons and consequences with just their terms
+      for (var c in this.putativeCausation) {
+        var currentCausal = this.putativeCausation[c];
+        this.putativeCausation[c].consequence = {
+          concept: currentCausal.consequence.concept.term,
+          movement: (currentCausal.consequence.movement.term) ? currentCausal.consequence.movement.term : ""
+        };
+        this.putativeCausation[c].reason = {
+          concept: currentCausal.reason.concept.term,
+          movement: (currentCausal.reason.movement.term) ? currentCausal.reason.movement.term : ""
+        };
+      }
+      callback();
     }
     
   };

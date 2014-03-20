@@ -177,37 +177,17 @@ module.exports = function (tools) {
         patternKB.addPatterns(taggedSentences);
         patternKB.findPutativeTemplates();
         patternKB.causalExtraction();
-        
-        /*
-        for (var c in patternKB.putativeCausation) {
-          console.log(patternKB.putativeCausation[c]);
-        }
-        
-        for (var p in patternKB.putativeTemplates) {
-          var holder = "";
-          for (var x in patternKB.putativeTemplates[p].reason) {
-            holder += " " + patternKB.putativeTemplates[p].reason[x].concept;
-          }
-          console.log("Reason: " + holder);
-          holder = "";
-          for (var x in patternKB.putativeTemplates[p].consequence) {
-            holder += " " + patternKB.putativeTemplates[p].consequence[x].concept;
-          }
-          console.log("Consequence: " + holder);
-        }
-        console.log("============ UNRESOLVED TEMPLATES ===============");
-        for (var p in patternKB.unresolvedTemplates) {
-          console.log(patternKB.unresolvedTemplates[p]);
-        }
-        */
-        
-        updateProgress(reqIp, 4, {
-          results: patternKB.putativeCausation,
-          concepts: conceptReport,
-          movements: movementReport,
-          sentences: patternKB.sentences,
-          templates: patternKB.sentenceTemplates
+        patternKB.causalCleanup(function () {
+          // Done once we've cleaned everything up!
+          updateProgress(reqIp, 4, {
+            results: patternKB.putativeCausation,
+            concepts: conceptReport,
+            movements: movementReport,
+            sentences: patternKB.sentences,
+            templates: patternKB.sentenceTemplates
+          });
         });
+        
       });
     });
     
