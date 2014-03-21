@@ -23,7 +23,110 @@ module.exports = function (tools) {
       Readability = require("readabilitySAX/readabilitySAX.js"),
       Parser = require("htmlparser2/lib/Parser.js"),
       
-      ipLog = {};
+      ipLog = {},
+      
+      analyze = function (req, res, trained) {
+        google.resultsPerPage = 25;
+        var inputs = req.body,
+            parsed = 0
+            corpus = [],
+            searchTerm = inputs.search,
+            passToAnalysis = function () {
+              console.log("[!] Passed to analysis!");
+                ipLog[req.ip] = {
+                  stage: 1,
+                  results: null
+                };
+                request.post(
+                  {
+                    url: "http://localhost:" + status.analysisPort + "/analyze",
+                    form: {
+                      corpus: corpus,
+                      searchTerm: searchTerm,
+                      reqIp: req.ip,
+                      requestType: (trained) ? "trained" : "learning"
+                    }
+                  },
+                  function (err2, response2, body2) {
+                    if (err2) {
+                      console.error(err2);
+                      res.send(500, {error: err2});
+                    }
+                  }
+                );
+                console.log("PARSED: " + parsed);
+                res.send(200);
+            };
+        
+        if (trained) {
+          request.get(
+            {
+              url: inputs.targetURL
+            },
+            function (error, response, body) {
+              var readable = new Readability({}),
+                  parser = new Parser(readable, {});
+                  
+              if (body !== null || body.length !== 0) {
+                parser.write(body);
+                corpus.push(readable.getText());
+                parser.end();
+              }
+              parsed++;
+              passToAnalysis();
+            }
+          );
+          
+          
+        // Otherwise, we have to train the system on a corpus, first
+        } else {
+          google("causes of " + searchTerm, function(err, next, links) {
+            if (err) {
+              console.error(err);
+              res.send(500, {error: err});
+            };
+            
+            for (var i = 0; i < links.length; ++i) {
+              console.log(">>>>>>> " + links[i].link);
+              
+              // Weird fix for tempermental server... sorry for the repetition
+              if (!links[i].link) {
+                parsed++;
+                if (parsed === google.resultsPerPage) {
+                  passToAnalysis();
+                }
+                continue;
+              }
+              if (links[i].href.indexOf(".pdf") !== -1 || links[i].href.indexOf(".ppt") !== -1) {
+                parsed++;
+                if (parsed === google.resultsPerPage) {
+                  passToAnalysis();
+                }
+                continue;
+              }
+              request.get(
+                {
+                  url: links[i].href
+                },
+                function (error, response, body) {
+                  var readable = new Readability({}),
+                      parser = new Parser(readable, {});
+                      
+                  if (body !== null || body.length !== 0) {
+                    parser.write(body);
+                    corpus.push(readable.getText());
+                    parser.end();
+                  }
+                  parsed++;
+                  if (parsed == google.resultsPerPage) {
+                    passToAnalysis();
+                  }
+                }
+              );
+            }
+          });
+        }
+      };
   
   /*
    * GET ROUTES
@@ -62,83 +165,13 @@ module.exports = function (tools) {
   });
   
   
+  app.post("/trained", function (req, res) {
+    analyze(req, res, true);
+  });
+  
+  
   app.post("/search", function (req, res) {
-    google.resultsPerPage = 15;
-    var inputs = req.body,
-        parsed = 0
-        corpus = [],
-        searchTerm = inputs.search,
-        passToAnalysis = function () {
-          console.log("[!] Passed to analysis!");
-            ipLog[req.ip] = {
-              stage: 1,
-              results: null
-            };
-            request.post(
-              {
-                url: "http://localhost:" + status.analysisPort + "/analyze",
-                form: {
-                  corpus: corpus,
-                  searchTerm: searchTerm,
-                  reqIp: req.ip
-                }
-              },
-              function (err2, response2, body2) {
-                if (err2) {
-                  console.error(err2);
-                  res.send(500, {error: err2});
-                }
-              }
-            );
-            console.log("PARSED: " + parsed);
-            res.send(200);
-        };
-    
-    google("causes of " + searchTerm, function(err, next, links) {
-      if (err) {
-        console.error(err);
-        res.send(500, {error: err});
-      };
-      
-      for (var i = 0; i < links.length; ++i) {
-        console.log(">>>>>>>" + links[i].link);
-        
-        // Weird fix for tempermental server... sorry for the repetition
-        if (!links[i].link) {
-          parsed++;
-          if (parsed === google.resultsPerPage) {
-            passToAnalysis();
-          }
-          continue;
-        }
-        if (links[i].href.indexOf(".pdf") !== -1 || links[i].href.indexOf(".ppt") !== -1) {
-          parsed++;
-          if (parsed === google.resultsPerPage) {
-            passToAnalysis();
-          }
-          continue;
-        }
-        request.get(
-          {
-            url: links[i].href
-          },
-          function (error, response, body) {
-            var readable = new Readability({}),
-                parser = new Parser(readable, {});
-                
-            if (body !== null || body.length !== 0) {
-              parser.write(body);
-              corpus.push(readable.getText());
-              parser.end();
-            }
-            parsed++;
-            if (parsed == google.resultsPerPage) {
-              passToAnalysis();
-            }
-          }
-        );
-      }
-    });
+    analyze(req, res, false);
   });
   
 };

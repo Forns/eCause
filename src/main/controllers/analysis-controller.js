@@ -21,6 +21,8 @@ module.exports = function (tools) {
       Pattern = tools.Pattern,
       PatternContainer = tools.PatternContainer,
       
+      aggregateResults = {},
+      
       updateProgress = function (reqIp, stage, results) {
         console.log("Progress Update: " + stage);
         request.post(
@@ -125,11 +127,119 @@ module.exports = function (tools) {
           }
         }
         return taggedSentences;
+      },
+      
+      learningRequest = function (req, res) {
+        var inputs = req.body,
+            reqIp = inputs.reqIp,
+            searchTerm = inputs.searchTerm,
+            corpus = inputs.corpus,
+            purgedCorpus = [],
+            taggedSentences = [],
+            sentenceTemplates = [],
+            topicModels = [],
+            topicPOS = [],
+            combinedTopics = {},
+            patternKB = new PatternCollection();
+                
+                
+        // The purged corpus contains all documents from the
+        // original that had content, now purged of irrelevant
+        // or malformed terms 
+        purgedCorpus = getCleanCorpus(corpus);
+        
+        // Once we've got our topic models, give status
+        // code 2
+        topicModels = getTopicModels(purgedCorpus);
+        combinedTopics = getCombinedTopics(topicModels);
+        updateProgress(reqIp, 2);
+        
+        // Now we'll start looking at the semantic analysis
+        POSFilter(combinedTopics, function (concepts, movements) {
+          taggedSentences = getTaggedSentences(purgedCorpus);
+          
+          var conceptReport = concepts.slice(0),
+              movementReport = movements.slice(0);
+              
+          patternKB.addMainConcepts(searchTerm, function () {
+            updateProgress(reqIp, 3);
+            // Now, we have our main concepts that center around
+            // the search term, and can examine auxiliary concepts
+            patternKB.addConcepts(concepts);
+            patternKB.addMovements(movements);
+            patternKB.addPatterns(taggedSentences);
+            patternKB.findPutativeTemplates();
+            patternKB.causalExtraction(false);
+            patternKB.findHiddenStructures();
+            patternKB.causalExtraction(true);
+            patternKB.causalCleanup(function () {
+              aggregateResults[searchTerm] = {
+                patternKB: patternKB
+              };
+              
+              // Done once we've cleaned everything up!
+              updateProgress(reqIp, 4, {
+                results: patternKB.putativeCausation,
+                concepts: conceptReport,
+                movements: movementReport,
+                sentences: patternKB.sentences,
+                templates: patternKB.sentenceTemplates
+              });
+              
+              patternKB.cleanUp();
+            });
+            
+          });
+        });
+      },
+      
+      trainedRequest = function (req, res) {
+        var inputs = req.body,
+            reqIp = inputs.reqIp,
+            searchTerm = inputs.searchTerm,
+            targetURL = inputs.targetURL,
+            corpus = inputs.corpus,
+            purgedCorpus = [],
+            taggedSentences = [],
+            sentenceTemplates = [],
+            topicModels = [],
+            topicPOS = [],
+            combinedTopics = {},
+            patternKB = aggregateResults[searchTerm].patternKB;
+                
+                
+        // The purged corpus contains all documents from the
+        // original that had content, now purged of irrelevant
+        // or malformed terms 
+        purgedCorpus = getCleanCorpus(corpus);
+        
+        // Once we've got our topic models, give status
+        // code 2
+        updateProgress(reqIp, 2);
+        
+        // Now we'll start looking at the semantic analysis
+        taggedSentences = getTaggedSentences(purgedCorpus);
+        updateProgress(reqIp, 3);
+        
+        // Now, we have our main concepts that center around
+        // the search term, and can examine auxiliary concepts
+        patternKB.addPatterns(taggedSentences);
+        patternKB.findPutativeTemplates();
+        patternKB.causalExtraction(false);
+        patternKB.findHiddenStructures();
+        patternKB.causalExtraction(true);
+        patternKB.causalCleanup(function () {
+          // Done once we've cleaned everything up!
+          updateProgress(reqIp, 4, {
+            results: patternKB.putativeCausation,
+            sentences: patternKB.sentences,
+            templates: patternKB.sentenceTemplates
+          });
+          
+          patternKB.cleanUp();
+        });
+            
       };
-  
-  /*
-   * GET ROUTES
-   */
   
 
   /*
@@ -138,78 +248,13 @@ module.exports = function (tools) {
   
   app.post("/analyze", function (req, res) {
     var inputs = req.body,
-        reqIp = inputs.reqIp,
-        searchTerm = inputs.searchTerm,
-        corpus = inputs.corpus,
-        purgedCorpus = [],
-        taggedSentences = [],
-        sentenceTemplates = [],
-        topicModels = [],
-        topicPOS = [],
-        combinedTopics = {},
-        patternKB = new PatternCollection();
+        requestType = inputs.requestType;
         
-        
-    // The purged corpus contains all documents from the
-    // original that had content, now purged of irrelevant
-    // or malformed terms 
-    purgedCorpus = getCleanCorpus(corpus);
-    
-    // Once we've got our topic models, give status
-    // code 2
-    topicModels = getTopicModels(purgedCorpus);
-    combinedTopics = getCombinedTopics(topicModels);
-    updateProgress(reqIp, 2);
-    
-    // Now we'll start looking at the semantic analysis
-    POSFilter(combinedTopics, function (concepts, movements) {
-      taggedSentences = getTaggedSentences(purgedCorpus);
-      
-      var conceptReport = concepts.slice(0),
-          movementReport = movements.slice(0);
-          
-      patternKB.addMainConcepts(searchTerm, function () {
-        updateProgress(reqIp, 3);
-        // Now, we have our main concepts that center around
-        // the search term, and can examine auxiliary concepts
-        patternKB.addConcepts(concepts);
-        patternKB.addMovements(movements);
-        patternKB.addPatterns(taggedSentences);
-        patternKB.findPutativeTemplates();
-        patternKB.causalExtraction(false);
-        patternKB.findHiddenStructures();
-        patternKB.causalExtraction(true);
-        patternKB.causalCleanup(function () {
-          /*
-          var printOut = function (node, indent) {
-            if (typeof(node) === "undefined") {
-              return;
-            }
-            var spaces = "";
-            for (var i = 0; i < indent; i++) {
-              spaces += "  ";
-            }
-            for (var t in node) {
-              console.log(spaces + t);
-              printOut(node[t], indent + 1);
-            }
-          };
-          console.log("PRINTING TEMPLATES ==========");
-          printOut(patternKB.causalReasons, 0);
-          */
-          
-          // Done once we've cleaned everything up!
-          updateProgress(reqIp, 4, {
-            results: patternKB.putativeCausation,
-            concepts: conceptReport,
-            movements: movementReport,
-            sentences: patternKB.sentences,
-            templates: patternKB.sentenceTemplates
-          });
-        });
-        
-      });
-    });
+    if (requestType === "learning") {
+      learningRequest(req, res);
+    } else {
+      trainedRequest(req, res);
+    }
     
     res.send(200);
   });

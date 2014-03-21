@@ -14,9 +14,8 @@ module.exports = function (natural, WNdb, pos, status) {
       tagger = new pos.Tagger(),
       
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
-      // causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
       causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect", "due"],
-      counterfactualLinks = ["were not", "had it", "were it", "did not", "had not", "had it", "would have", "should have"];
+      counterfactualLinks = ["were not", "had it", "were it", "had not", "had it", "would have", "should have"];
       
   // Process the synonyms for each causal verb
   (function () {
@@ -433,7 +432,7 @@ module.exports = function (natural, WNdb, pos, status) {
         }
         patternTrieFind = this.patternTrie.findPrefix(currentTag)[0];
         if (patternTrieFind && patternTrieFind.length === 0 && hasWildcard) {
-          runningScore += 1;
+          runningScore += 0.5;
         }
       }
       
@@ -463,7 +462,7 @@ module.exports = function (natural, WNdb, pos, status) {
             
             // Now we check if the items at those locations need flagging
             if (cIndex === -1) {
-              cIndex = conceptPositions[0];
+              cIndex = conceptPositions[(conceptPositions.length) ? conceptPositions.length - 1 : 0];
             }
             if (cIndex) {
               concepts[cIndex].isConcept = true;
@@ -687,6 +686,9 @@ module.exports = function (natural, WNdb, pos, status) {
           concept: currentCausal.reason.concept.term,
           movement: (currentCausal.reason.movement.term) ? currentCausal.reason.movement.term : ""
         };
+        if (this.putativeCausation[c].reason.concept === this.putativeCausation[c].consequence.concept) {
+          continue;
+        }
         trieString = currentCausal.consequence.concept + currentCausal.consequence.movement + currentCausal.reason.concept + currentCausal.reason.movement;
         if (!causalTrie.contains(trieString)) {
           causalTrie.addString(trieString);
@@ -695,6 +697,23 @@ module.exports = function (natural, WNdb, pos, status) {
       }
       this.putativeCausation = result;
       callback();
+    },
+    
+    cleanUp: function () {
+      // Holds the tagged sentences
+      this.sentences = [];
+      // Holds the tagged sentence templates
+      this.sentenceTemplates = [];
+      // Holds only the templates that are relevant
+      this.putativeTemplates = [];
+      // Holds only the templates that aren't relevant
+      this.unresolvedTemplates = [];
+      // Holds the putative causal relations; maps that have:
+        // reason: term with a concept
+        // consequence: term with a movement
+      this.putativeCausation = [];
+      this.causalReasons = {};
+      this.causalConsequences = {};
     }
     
   };

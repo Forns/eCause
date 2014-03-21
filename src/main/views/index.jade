@@ -21,6 +21,7 @@ block content
                 | &nbsp; Submit
                 
           #output.hidden
+            p.hidden.alert.alert-info#trained-info NOTE: The output below is from using the trained system on another web page!
             ul.nav.nav-tabs
               li.active
                 a(href="#topics", data-toggle="tab") Concepts &amp; Movements
@@ -56,4 +57,17 @@ block content
                       th Consequence
                       th Consequence Movement
                   tbody#output-results
+            
+            br
+            br
+            form.well#training-form.form-horizontal(role="form")
+              div.form-group
+                label.col-md-2.control-label(for="search-term") Use trained system on URL:
+                div.col-md-10
+                  input#trained-url.form-control(type="text", placeholder="e.g. http://en.wikipedia.org/wiki/Global_warming", maxlength="1000").required
+                  
+              div.form-group.text
+                button#train-button.btn.btn-default.submit-button(type="submit").pull-right 
+                  span.glyphicon.glyphicon-check
+                  | &nbsp; Submit
                 

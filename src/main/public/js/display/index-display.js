@@ -3,7 +3,10 @@
  */
 $(function () {
   var formId = "#search-form",
+      trainedId = "#training-form",
       searchTerm = $("#search-term"),
+      trainedURL = $("#trained-url"),
+      trainedTerm,
       
       progressTick,
       loaded = false,
@@ -61,6 +64,8 @@ $(function () {
       },
       
       validObject = validationConfig(formId, function () {
+        trainedTerm = searchTerm.val();
+        
         // First, set up the loading screen
         $("#popup").modal("hide");
         modalPopup(
@@ -185,6 +190,144 @@ $(function () {
                         "</tr>"
                       );
                     }
+                    
+                    $("#trained-info")
+                      .addClass("hidden");
+                    
+                    $("#output")
+                      .removeClass("hidden");
+                  }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                  clearInterval(progressTick);
+                  errorModal(textStatus);
+                }
+              });
+            }, 2000);
+          },
+          error: function (jqXHR, textStatus, errorThrown) {
+            clearInterval(progressTick);
+            errorModal(textStatus);
+          }
+        });
+      }),
+      
+      // Horrible code repetition; to clean up later!
+      validObject2 = validationConfig(trainedId, function () {
+        // First, set up the loading screen
+        $("#popup").modal("hide");
+        modalPopup(
+          "body",
+          "popup",
+          "Working...",
+          "<table class='table'>" +
+            "<caption>Performing causal extraction now. Thanks for your patience!</caption>" +
+            "<tbody>" +
+              "<tr>" +
+                "<th>Fetching documents...</th>" +
+                "<td id='progress-documents' class='prog' stage='0'>In Progress...</td>" +
+              "</tr>" +
+              "<tr>" +
+                "<th>Topic modeling...</th>" +
+                "<td id='progress-documents' class='prog' stage='1'>-</td>" +
+              "</tr>" +
+              "<tr>" +
+                "<th>Finding patterns...</th>" +
+                "<td id='progress-documents' class='prog' stage='2'>-</td>" +
+              "</tr>" +
+              "<tr>" +
+                "<th>Extracting causality...</th>" +
+                "<td id='progress-documents' class='prog' stage='3'>-</td>" +
+              "</tr>" +
+            "</tbody>" +
+          "</table>",
+          ""
+        );
+        
+        $.ajax({
+          url: "/trained",
+          type: "POST",
+          data: {targetURL: trainedURL.val(), search: trainedTerm},
+          success: function (results, textStatus, jqXHR) {
+            $("#progress-documents")
+              .html(
+                "<span class='glyphicon glyphicon-check'></span> Done!"
+              );
+            
+            progressTick = setInterval(function () {
+              $.ajax({
+                url: "/progress",
+                type: "GET",
+                success: function (results, textStatus, jqXHR) {
+                  console.log(results);
+                  progressUpdate(results.progress);
+                  if (results.progress >= totalStages) {
+                    clearInterval(progressTick);
+                    if (loaded) {
+                      return;
+                    }
+                    loaded = true;
+                    $("#popup .modal-footer")
+                      .append(
+                        "<button id='view-results-button' type='button' class='btn btn-primary' data-dismiss='modal' aria-hidden='true'>View Results</button>"
+                      );
+                    $("#view-results-button")
+                      .click(function () {
+                        loaded = false;
+                      });
+                    $("#popup .modal-title")
+                      .html("Done!");
+                  }
+                  
+                  // If we have results, display them!
+                  if (results.results) {
+                    var findings = results.results,
+                        causality = findings.results,
+                        concepts = findings.concepts,
+                        movements = findings.movements,
+                        sentences = findings.sentences,
+                        templates = findings.templates,
+                        conceptString = "",
+                        movementString = "",
+                        conceptList = $("#concept-results"),
+                        movementList = $("#movement-results"),
+                        relevantTable = $("#relevant-results"),
+                        resultsTable = $("#output-results");
+                    
+                    // Set up the relevant table
+                    relevantTable.html("");
+                    for (var s in sentences) {
+                      var currentSentence = sentences[s],
+                          currentTemplate = templates[s];
+                      
+                      relevantTable.append(
+                        "<tr>" +
+                          "<td>" + patternToString(currentSentence) + "</td>" +
+                          "<td>" + patternToTemplateString(currentTemplate) + "</td>" +
+                        "</tr>"
+                      );
+                    }
+                    
+                    // Set up results table
+                    resultsTable.html("");
+                    for (var c in causality) {
+                      var currentCausal = causality[c],
+                          currentReason = currentCausal.reason,
+                          currentConsequence = currentCausal.consequence,
+                          styling = (currentCausal.discovered === "true") ? "class='warning'" : "";
+                          
+                      resultsTable.append(
+                        "<tr " + styling + ">" +
+                          "<td>" + currentConsequence.concept +  "</td>" + 
+                          "<td>" + currentConsequence.movement + "</td>" + 
+                          "<td>" + currentReason.concept +  "</td>" + 
+                          "<td>" + currentReason.movement + "</td>" + 
+                        "</tr>"
+                      );
+                    }
+                    
+                    $("#trained-info")
+                      .removeClass("hidden");
                     
                     $("#output")
                       .removeClass("hidden");
