@@ -15,7 +15,7 @@ module.exports = function (natural, WNdb, pos, status) {
       
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
       causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect", "due"],
-      counterfactualLinks = ["were not", "had it", "were it", "had not", "had it", "would have", "should have"];
+      counterfactualLinks = ["were_not", "had_it", "were_it", "had_not", "had_it", "would_have", "should_have"];
       
   // Process the synonyms for each causal verb
   (function () {
@@ -107,6 +107,9 @@ module.exports = function (natural, WNdb, pos, status) {
             toPush.isCausal = true;
             result.isRelevant = true;
           }
+          if (currentElement.isCF) {
+            toPush.isCF = true;
+          }
         }
         
         result.elements.push(toPush);
@@ -169,6 +172,7 @@ module.exports = function (natural, WNdb, pos, status) {
     
     // Set up the verb Trie
     this.addCausalVerbs(causalVerbs);
+    this.addCounterfactualLinks(counterfactualLinks);
     
     // Set up the pattern part of speech Trie
     this.patternTrie.addStrings(patternPOS);
@@ -185,6 +189,13 @@ module.exports = function (natural, WNdb, pos, status) {
         verbs[v] = stemmer.stem(verbs[v]);
       }
       this.verbTrie.addStrings(verbs);
+    },
+    
+    addCounterfactualLinks: function (CFLinks) {
+      for (var c in CFLinks) {
+        CFLinks[c] = stemmer.stem(CFLinks[c]);
+      }
+      this.counterfactualTrie.addStrings(CFLinks);
     },
     
     addMovements: function (movements) {
@@ -249,6 +260,7 @@ module.exports = function (natural, WNdb, pos, status) {
             hasConcept = false,
             hasMovement = false,
             hasCause = false,
+            hasCF = false,
             last;
             
         for (var e in pattern.elements) {
@@ -264,14 +276,20 @@ module.exports = function (natural, WNdb, pos, status) {
             pattern.elements[e].isMovement = true;
             hasMovement = true;
           }
-          if (this.verbTrie.contains(pattern.elements[e].stem)) {
+          
+          // Counterfactual vs causal expression
+          if (last && this.counterfactualTrie.contains(last + "_" + pattern.elements[e].stem)) {
+            pattern.elements[e].isCF = true;
+            hasCF = true;
+          } else if (this.verbTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isCausal = true;
             hasCause = true;
           }
-          last = pattern.elements[e].concept;
+          last = pattern.elements[e].stem;
         }
         
         pattern.isRelevant = hasMainConcept;
+        pattern.isCF = hasCF;
         putativePattern = pattern.toTemplate(this.patternTrie);
         
         this.sentences.push(pattern);
@@ -340,7 +358,7 @@ module.exports = function (natural, WNdb, pos, status) {
         for (var i = 0; i < currentElements.length; i++) {
           // We'll assess whether or not the clauses to the left and right of
           // a causal verb can be reasons or consequences
-          if (currentElements[i].isCausal) {
+          if (currentElements[i].isCausal || currentElements[i].isCF) {
             var leftClause = this.relevantTerms(currentElements, 0, i),
                 rightClause = this.relevantTerms(currentElements, i + 1, currentElements.length),
                 hasMain = leftClause.hasMainConcept || rightClause.hasMainConcept,
