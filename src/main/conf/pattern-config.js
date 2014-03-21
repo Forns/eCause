@@ -15,7 +15,8 @@ module.exports = function (natural, WNdb, pos, status) {
       
       patternPOS = ["NN", "JJ", "VB", "RB", "IN"],
       // causalVerbs = ["allow", "block", "cause", "enable", "force", "get", "help", "hinder", "hold", "impede", "keep", "leave", "let", "make", "permit", "prevent", "protect", "restrain", "save", "set", "start", "stimulate", "stop", "as", "due", "to", "because", "helped", "aid", "bar", "bribe", "compel", "constrain", "convince", "deter", "discourage", "dissuade", "drive", "have", "hamper", "impel", "incite", "induce", "influence", "inspire", "lead", "move", "persuade", "prompt", "push", "restrict", "result", "rouse", "send", "spur"];
-      causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect", "due"];
+      causalVerbs = ["cause", "because", "result", "make", "force", "lead", "associated", "affect", "due"],
+      counterfactualLinks = ["were not", "had it", "were it", "did not", "had not", "had it", "would have", "should have"];
       
   // Process the synonyms for each causal verb
   (function () {
@@ -147,6 +148,7 @@ module.exports = function (natural, WNdb, pos, status) {
   
   PatternCollection = this.PatternCollection = function () {
     this.verbTrie = new Trie(false);
+    this.counterfactualTrie = new Trie(false);
     this.movementTrie = new Trie(false);
     this.mainConceptTrie = new Trie(false);
     this.conceptTrie = new Trie(false);
@@ -247,7 +249,9 @@ module.exports = function (natural, WNdb, pos, status) {
             hasMainConcept = false,
             hasConcept = false,
             hasMovement = false,
-            hasCause = false;
+            hasCause = false,
+            last;
+            
         for (var e in pattern.elements) {
           if (this.mainConceptTrie.contains(pattern.elements[e].stem)) {
             pattern.elements[e].isMainConcept = true;
@@ -265,6 +269,7 @@ module.exports = function (natural, WNdb, pos, status) {
             pattern.elements[e].isCausal = true;
             hasCause = true;
           }
+          last = pattern.elements[e].concept;
         }
         
         pattern.isRelevant = hasMainConcept;
